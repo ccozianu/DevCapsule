@@ -541,6 +541,18 @@ its ruling thread open):
 
 ## Open Threads
 
+- **`init --regenerate` versus `config`** (owner decision 2026-09-06:
+  leave current `init` as acceptable for now; settle the semantics in
+  `project-management`): a systematic walk found five gaps between what
+  `--regenerate` says and does — `--need` derives the lock without
+  rewriting the manifest's need (silent divergence, no digest check);
+  identity flags accepted and ignored on a re-init; the owner's own
+  checkout record is rewritten despite the design note's "never touches
+  checkout records"; the report prints a recommendation's justification
+  where its value belongs; two messages still name `--regenerate` as the
+  sole remedy. The owner's principle: init operates on the source tree's
+  `.devcapsule`, and updates the local run configuration only as a
+  convenience; `config` owns the local half. Sent as intake 2026-09-06.
 - **Refusal UX and the matrix's vocabulary** (ruled 2026-09-06): the
   owner took stock of every refusal, its grounds, and its audience
   (recorded as the first entry of the new `engineering-docs/blog/`) and
