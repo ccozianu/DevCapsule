@@ -467,9 +467,9 @@ _V0_2_8_BASE = _BasePin(
 # The v0.2.9 base is a rebuild in the same family (recipe version 5, same
 # toolchain) embedding the 0.2.9 runtime, so it inherits the family's
 # validations. Pushed by the owner 2026-09-02; digest read from the
-# registry at pinning time. Withdrawn from the registry by the owner on
-# 2026-09-06 with the 0.2.9 release; the pin moves to the v0.2.10 base
-# when that is pushed.
+# registry at pinning time. The 0.2.9 release is to be withdrawn once
+# 0.2.10 is pushed and validated (owner decision 2026-09-06); the pin
+# moves to the v0.2.10 base when that is pushed, before the tag.
 _V0_2_9_BASE = _BasePin(
     mnemonic="v0.2.9",
     base_family=_BASE_FAMILY_UBUNTU_24_04,
