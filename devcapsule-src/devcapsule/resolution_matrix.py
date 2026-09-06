@@ -464,24 +464,16 @@ _V0_2_8_BASE = _BasePin(
     },
 )
 
-# The v0.2.9 base is a rebuild in the same family (recipe version 5, same
-# toolchain) embedding the 0.2.9 runtime, so it inherits the family's
-# validations. Pushed by the owner 2026-09-02; digest read from the
-# registry at pinning time. Superseded by v0.2.10 below; the 0.2.9
-# release is withdrawn once 0.2.10 is validated (owner decision
-# 2026-09-06), and this pin retires with it.
-_V0_2_9_BASE = _BasePin(
-    mnemonic="v0.2.9",
-    base_family=_BASE_FAMILY_UBUNTU_24_04,
-    satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
-    lock_table={
-        "reference": (
-            "docker.io/mycodespaceai/devcapsule-base"
-            "@sha256:ca9f79619fc0709a13e6a66de8959cda55dd47c23ec073fe0eb353de32734232"
-        ),
-        "build-mnemonic": "v0.2.9",
-    },
-)
+# The v0.2.9 base (a recipe-version-5 rebuild embedding the 0.2.9 runtime,
+# pushed 2026-09-02, digest sha256:ca9f7961…734232) was retired on
+# 2026-09-06 when the owner withdrew the 0.2.9 release from GitHub and
+# Docker Hub, after v0.2.10 below had been pushed and validated: 0.2.9
+# shipped codex as a single plucked binary, fixed after its tag. The pin
+# leaves with the release, explicitly, per D-0007; the family's
+# validations it inherited are unaffected, and the evidence strings below
+# that name the v0.2.9 image stay as the record of where each smoke ran.
+# Nothing selected v0.2.9 once v0.2.10 was pinned, so no generated
+# formation changes and _MATRIX_VERSION does not advance.
 
 # The v0.2.10 base (recipe version 6: no boot contract in the base, the
 # formation recipe sets its own) embeds the released 0.2.10 PEX, built
@@ -766,7 +758,7 @@ _POSTGRESQL_CLIENT_16 = _ComponentPin(
 _LINUX_AMD64_MATRIX = ResolutionMatrix(
     platform=Platform.LINUX_AMD64,
     matrix_version=_MATRIX_VERSION,
-    bases=(_V0_2_8_BASE, _V0_2_9_BASE, _V0_2_10_BASE),
+    bases=(_V0_2_8_BASE, _V0_2_10_BASE),
     components={
         "pycharm": (_PYCHARM_2026_2_0_1,),
         "codium": (_CODIUM_1_126_04524,),

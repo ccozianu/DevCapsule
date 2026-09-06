@@ -350,6 +350,19 @@ Remaining: the owner's smoke on the rebuilt base (a lock change means
 the checkout's base-image authorization re-asks), the PR for this
 repin, the 0.2.9 withdrawal, and the v0.2.9 pin's retirement.
 
+**Walk status, 2026-09-06 night.** The owner withdrew 0.2.9: the GitHub
+release and the Docker Hub tag are gone (verified from the capsule
+against both APIs; the git tag `v0.2.9` at `f2c6818` still exists on
+the remote, and the v0.2.9 manifest is still served by digest on Docker
+Hub — retention, not a promise). The v0.2.9 pin is retired from the
+matrix, explicitly, recorded in place and as D-0007's third 2026-09-06
+amendment; `embedded-18` stands because nothing selected v0.2.9 once
+v0.2.10 was pinned, so golden locks, the dogfood lock, and the sample
+locks are unchanged. Suite 552 green, mypy clean. The branch was
+rebased onto `main` (the #59 and #60 merges) and carries the repin and
+the retirement, both awaiting the owner's PR. The 0.2.10 walk is
+complete except for the owner's smoke on the rebuilt base.
+
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
 
 1. ~~The Antigravity CLI component is implemented and owner-smoked, per
@@ -470,14 +483,19 @@ updated in place. The state to re-verify on resume, in order:
    land): smoke the rebuilt v0.2.10 base
    (`docker.io/mycodespaceai/devcapsule-base:v0.2.10`, digest
    `sha256:4bb691b5…56bf9c`, built from the released PEX) on the
-   dogfood project and, if desired, tictactoe; merge the repin PR from
-   this branch; withdraw 0.2.9 from GitHub and Docker Hub.
-2. **Agent follow-ups, gated on those**: retire the `v0.2.9` pin from
-   the matrix once 0.2.9 is withdrawn (explicit retirement, D-0007);
+   dogfood project and, if desired, tictactoe; open and merge the PR
+   from this branch (the repin and the v0.2.9 pin's retirement);
+   decide whether the git tag `v0.2.9` (`f2c6818`) is deleted from the
+   remote or kept as history now that the release it named is
+   withdrawn. ~~Withdraw 0.2.9 from GitHub and Docker Hub.~~ Done
+   2026-09-06 night, verified.
+2. **Agent follow-ups, gated on those**: ~~retire the `v0.2.9` pin~~
+   done 2026-09-06 night (matrix comment, D-0007 third amendment);
    convert the provisional entries the smokes evidence (PyCharm,
-   claude-code 2.1.236/2.1.261, codex 0.153.0/0.153.4) and close the
-   codex bug record and the formation-identity record's entrypoint
-   half on the "reused canonical environment" second run.
+   claude-code 2.1.236/2.1.261, codex 0.153.0/0.153.4) once the owner
+   confirms which smokes ran on the rebuilt base, and close the codex
+   bug record and the formation-identity record's entrypoint half on
+   the "reused canonical environment" second run.
 3. **Open Threads** below carry the rest; the ones the owner is most
    likely to pick up next: the `config need` layering ruling (point
    (a)), the `use_legacy_landlock` deprecation at the next codex
