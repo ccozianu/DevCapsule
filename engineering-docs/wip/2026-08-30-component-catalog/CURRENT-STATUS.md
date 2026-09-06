@@ -363,6 +363,24 @@ rebased onto `main` (the #59 and #60 merges) and carries the repin and
 the retirement, both awaiting the owner's PR. The 0.2.10 walk is
 complete except for the owner's smoke on the rebuilt base.
 
+**Sync question, 2026-09-06 night.** Seeing this branch's diff, the
+owner asked whether the self-contained CLI and the runtime the base
+embeds can ever be in absolute sync. Diagnosis: not while the CLI pins
+the base digest and the base embeds the CLI, because a PEX pinning the
+digest of the image that contains it is a content-hash fixed point;
+what has to be in sync is narrower (the inside runtime never reads the
+matrix). Three shapes and the workstream's preference (the launcher
+delivers its own PEX into the formation at materialization) went to
+`project-management` as intake
+`2026-09-06-component-catalog-one-devcapsule-inside-and-outside.md`
+(outbox `802adaf`). The owner will merge this branch to `main` as is.
+Advice given on "rebuild a v0.2.10 CLI to capture the change": no; the
+release workflow re-run on an existing tag compares the PEX
+byte-for-byte with the published asset, so a rebuild means moving the
+tag and deleting the release. The released 0.2.10 stays valid (its
+pinned first-push digest is still served), the change ships with the
+next version, and `main` should leave 0.2.10 behind after this merge.
+
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
 
 1. ~~The Antigravity CLI component is implemented and owner-smoked, per
