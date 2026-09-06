@@ -558,6 +558,18 @@ its ruling thread open):
 
 ## Open Threads
 
+- **One base family, named plainly** (owner direction 2026-09-06,
+  implemented on the branch, matrix `embedded-16`): `postgresql-client`
+  gained its validation on the current family (package identity checked
+  in the v0.2.9 image: psql 16.14, the build v026 shipped), which was the
+  last thing keeping v026 selectable; v026 and the validations recorded
+  only against it are retired; `substrate` is renamed `base_family` on
+  `_BasePin` and `_VerifiedEdge` with documentation, and the single
+  family is `ubuntu-24.04`. Recorded as D-0007's second 2026-09-06
+  amendment; the release note's naming bullet follows. The wider rename
+  (`_VerifiedEdge` itself, "edge" in identifiers) stays with the
+  resolution-matrix cleanup backlog item. Golden locks regenerated
+  (`pycharm-full` moves from v026 to v0.2.9).
 - **`init --regenerate` versus `config`** (owner decision 2026-09-06:
   leave current `init` as acceptable for now; settle the semantics in
   `project-management`): a systematic walk found five gaps between what

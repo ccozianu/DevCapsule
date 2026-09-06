@@ -23,12 +23,12 @@ from devcapsule.platforms import Platform
 from devcapsule.resolution_matrix import MATRICES, ResolutionMatrix
 
 
-def matrix_without_pycharm_on_gen2() -> ResolutionMatrix:
-    """The embedded matrix as it stood before PyCharm's gen2 edge (2026-09-05).
+def matrix_without_antigravity_validation() -> ResolutionMatrix:
+    """The embedded matrix with the Antigravity CLI's validation removed.
 
-    Tests of behaviour that needs a need with *no* fully verified base —
-    PyCharm plus antigravity, which is verified only on gen2 — rebuild that
-    state from the real pins rather than freezing a copy of them.
+    Tests of behaviour that needs a need with *no* fully validated base —
+    here PyCharm plus antigravity — rebuild that state from the real pins
+    rather than freezing a copy of them.
     """
 
     real = MATRICES[Platform.LINUX_AMD64]
@@ -38,9 +38,7 @@ def matrix_without_pycharm_on_gen2() -> ResolutionMatrix:
         bases=real._bases,
         components=real._components,
         edges=tuple(
-            edge
-            for edge in real._verified.values()
-            if not (edge.component_id == "pycharm" and edge.substrate.endswith("gen2"))
+            edge for edge in real._verified.values() if edge.component_id != "antigravity-cli"
         ),
         couplings=real._couplings,
         surface_capabilities=real._surface_capabilities,
@@ -54,7 +52,7 @@ def sparse_matrix():
 
     return patch(
         "devcapsule.project_operations.MATRICES",
-        {Platform.LINUX_AMD64: matrix_without_pycharm_on_gen2()},
+        {Platform.LINUX_AMD64: matrix_without_antigravity_validation()},
     )
 
 
@@ -914,20 +912,19 @@ def test_init_unverified_resolves_past_the_matrix_with_a_gentle_warning(
         "true",
     ]
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False), sparse_matrix():
-        # In the matrix as it stood before 2026-09-05, PyCharm was verified
-        # only on gen1 and antigravity only on gen2: no fully verified base
-        # exists, and the strict form refuses.
+        # With antigravity's validation removed no fully validated base
+        # exists, and the strict form discloses the gap and the experiment.
         assert cli.main(need) == 2
         refusal = capsys.readouterr().err
-        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Not yet validated: antigravity-cli 1.1.24 on base v0.2.9." in refusal
         assert "Run it as an experiment with --unverified" in refusal
 
         assert cli.main([*need, "--unverified"]) == 0
         warning = capsys.readouterr().err
-        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in warning
+        assert "Running as an experiment. Not yet validated: antigravity-cli 1.1.24 on base v0.2.9." in warning
 
     lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
-    assert "pycharm" in lock["unverified-combinations"]
+    assert "antigravity-cli" in lock["unverified-combinations"]
     lock_text = (project / ".devcapsule" / "devcapsule.linux-amd64.lock").read_text(
         encoding="utf-8"
     )
@@ -1114,9 +1111,9 @@ def test_interactive_default_agent_decline_keeps_the_need(tmp_path: Path) -> Non
 
 
 def test_default_agent_is_not_offered_where_it_cannot_resolve(tmp_path: Path) -> None:
-    """Where the surface has no verified antigravity combination (PyCharm
-    before its gen2 edge), the question must not appear, and the init must
-    not fail on the default's account."""
+    """Where the default agent has no validated combination with the surface,
+    the question must not appear, and the init must not fail on the
+    default's account."""
 
     project = tmp_path / "interactive-project"
     project.mkdir()
@@ -1224,15 +1221,15 @@ def test_config_need_offers_and_accepts_the_experiment_lever(tmp_path: Path, cap
 
         assert cli.main(grow) == 2
         refusal = capsys.readouterr().err
-        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Not yet validated: antigravity-cli 1.1.24 on base v0.2.9." in refusal
         assert "Run it as an experiment with --unverified" in refusal
         manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
         assert manifest["capabilities"]["need"] == ["python", "python-ide"]
 
         assert cli.main([*grow, "--unverified"]) == 0
         warning = capsys.readouterr().err
-        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1" in warning
+        assert "Running as an experiment. Not yet validated: antigravity-cli 1.1.24" in warning
         manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
         assert manifest["capabilities"]["need"] == ["antigravity-agent", "python", "python-ide"]
         lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
-        assert lock["unverified-combinations"] == "pycharm 2026.2.0.1 on base v0.2.9"
+        assert lock["unverified-combinations"] == "antigravity-cli 1.1.24 on base v0.2.9"

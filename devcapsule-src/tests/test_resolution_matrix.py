@@ -170,20 +170,16 @@ def test_frontend_need_generates_a_complete_codium_lock() -> None:
     assert codium["url"].endswith("VSCodium-linux-x64-1.126.04524.tar.gz")
     assert lock["materialization"]["recipe"] == "vscode-local-materialization"
     assert set(lock["components"]) == {"interactive-surface", "codium"}
-    # Codium is verified on the gen2 substrate (owner smoke on v0.2.8,
-    # 2026-09-02), so the newest gen2 base wins; v026 (gen1) predates the
-    # vscode adapter in its embedded runtime.
+    # The newest base in the validated family wins.
     assert lock["base"]["build-mnemonic"] == "v0.2.9"
 
 
 def test_base_selection_follows_each_needs_verified_edges() -> None:
-    """The sparse matrix in action: newest verified base per capability set.
+    """The sparse matrix in action: newest validated base per capability set.
 
-    Every surface and agent now carries a gen2 edge (PyCharm's provisional
-    since the owner's 2026-09-05 dogfood session on the v0.2.9 rebuild),
-    so every composition rides the newest gen2 base. v026 remains
-    selectable only through a need it alone can serve, which no current
-    pin set produces; the synthetic matrices below cover the sparse case.
+    One base family remains (v026 and the validations recorded only against
+    it retired 2026-09-06), so every composition rides its newest base; the
+    synthetic matrices below cover the sparse case.
     """
 
     assert parse(rendered(["node", "frontend-ide"]))["base"]["build-mnemonic"] == "v0.2.9"
@@ -270,8 +266,8 @@ def _synthetic_matrix(
     couplings: tuple[_Coupling, ...] = (),
     bases: tuple[_BasePin, ...] | None = None,
 ) -> ResolutionMatrix:
-    # The default bases sit on distinct substrates, so each is its own
-    # verification target; edges name the substrate ("s1"/"s2").
+    # The default bases sit in distinct families, so each is its own
+    # validation target; edges name the family ("s1"/"s2").
     return ResolutionMatrix(
         platform=Platform.LINUX_AMD64,
         matrix_version="test-1",
@@ -308,8 +304,8 @@ def test_resolution_prefers_the_newest_verified_combination() -> None:
     assert lock["components"]["ide"]["version"] == "2.0"
 
 
-def test_a_base_on_an_unproven_substrate_is_not_selected() -> None:
-    # A newer base on a *new substrate* has inherited nothing: it earns no
+def test_a_base_in_an_unvalidated_family_is_not_selected() -> None:
+    # A newer base in a *new family* has inherited nothing: it earns no
     # edges until something is smoked on its generation, so resolution keeps
     # selecting the proven base. Verifying the new generation later is a
     # data addition, not an interface change.
@@ -322,9 +318,9 @@ def test_a_base_on_an_unproven_substrate_is_not_selected() -> None:
     assert lock["components"]["ide"]["version"] == "2.0"
 
 
-def test_a_new_base_on_a_shared_substrate_inherits_verified_edges() -> None:
+def test_a_new_base_in_a_validated_family_inherits_its_validations() -> None:
     # The ruling of 2026-09-02: what a smoke establishes is component-on-
-    # substrate, so a base release that changes nothing substantial (same
+    # family, so a base release that changes nothing substantial (same
     # generation) inherits its predecessor's edges and is selected as the
     # newest pin — no re-smoke per release of our own base.
     matrix = _synthetic_matrix(
