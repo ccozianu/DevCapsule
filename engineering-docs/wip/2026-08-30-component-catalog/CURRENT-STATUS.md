@@ -541,6 +541,24 @@ its ruling thread open):
 
 ## Open Threads
 
+- **Refusal UX and the matrix's vocabulary** (ruled 2026-09-06): the
+  owner took stock of every refusal, its grounds, and its audience
+  (recorded as the first entry of the new `engineering-docs/blog/`) and
+  ruled: a missing validation is disclosed, not refused — the message
+  names the elements the experiment would run and offers `--unverified`,
+  which `config need` now accepts too; only a missing toolchain refuses
+  outright; the lock header and `unverified-combinations` say the same
+  in the same words; matrix vocabulary (edges, substrates) stays out of
+  adopter-facing text. Implemented on the branch; D-0007 amended; the
+  UX note gained *When Init Refuses, And When It Only Discloses*; the
+  2026-09-03 refusal bug record closed. Sent to `project-management`
+  (intake 2026-09-06): design how the matrix learns from adopters'
+  successful experiments and, later, gate matrix changes on mainline on
+  a claim that every added combination ran. Not done: `resolve`/`run`
+  still do not read `unverified-combinations` back to a collaborator
+  (the design says "warn the same way, for now" — owner-facing only
+  today); the internal rename (edge/substrate → validation/base family)
+  waits for the resolution-matrix cleanup backlog item.
 - **Codex sandbox configuration** (opened and ruled 2026-09-05): with
   the npm layout in place, codex's default bubblewrap sandbox failed
   under capsule hardening for a different reason — unprivileged user

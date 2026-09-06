@@ -240,53 +240,43 @@ class ResolutionMatrix:
             and capability not in self._ancillary_capabilities
         }
 
-        # Every base's failure is kept and reported newest-first: the newest
-        # base's gap is usually the interesting one (often a single missing
-        # edge), and a message naming only the oldest base's problem sent the
-        # owner down the wrong path (2026-09-03 bug record).
-        failures: list[str] = []
         for base in reversed(self._bases):
-            missing_from_base = sorted(base_needs - base.satisfies)
-            if missing_from_base:
-                failures.append(
-                    f"{base.mnemonic}: does not ship " + ", ".join(missing_from_base)
-                )
+            if base_needs - base.satisfies:
                 continue
-            chosen, failure = self._verified_selection(required, base)
-            if chosen is None:
-                failures.append(f"{base.mnemonic}: {failure}")
-                continue
-            return self._formation(capabilities, surface_id, base, chosen)
-        if allow_unverified:
-            fallback = self._unverified_selection(required, base_needs)
-            if fallback is not None:
-                base, chosen, unverified = fallback
-                return self._formation(
-                    capabilities, surface_id, base, chosen, unverified=unverified
-                )
-        # Every refusal names --unverified (owner ruling 2026-09-05):
-        # adopters must be able to try new components and bases ahead of the
-        # matrix and report back. Base capabilities stay hard constraints —
-        # the wording says what the flag does and does not bypass.
-        if allow_unverified:
-            remedy = (
-                "--unverified cannot help here: a base that does not ship a "
+            chosen = self._verified_selection(required, base)
+            if chosen is not None:
+                return self._formation(capabilities, surface_id, base, chosen)
+
+        # Nothing fully validated. What the user reads from here on is the
+        # owner's 2026-09-06 ruling: a missing validation is a fact about
+        # the matrix's knowledge, not about the request, so the message
+        # names the exact elements the experiment would run — components,
+        # versions, base; never the model's own vocabulary — and offers the
+        # experiment. Only a base that does not ship a needed toolchain is a
+        # refusal on grounds, and it says that --unverified cannot help.
+        fallback = self._unverified_selection(required, base_needs)
+        if fallback is None:
+            gaps = [
+                f"{base.mnemonic}: does not ship "
+                + ", ".join(sorted(base_needs - base.satisfies))
+                for base in reversed(self._bases)
+            ]
+            raise ResolutionError(
+                "No base ships everything this project needs:\n  "
+                + "\n  ".join(gaps)
+                + "\n--unverified cannot help here: a base that does not ship a "
                 "needed toolchain is a hard refusal."
             )
-        else:
-            remedy = (
-                "Pass --unverified to resolve past missing verification with "
-                "a gentle warning; the generated lock names every unverified "
-                "combination. A base that does not ship a needed toolchain "
-                "remains a hard refusal."
+        base, chosen, unverified = fallback
+        if allow_unverified:
+            return self._formation(
+                capabilities, surface_id, base, chosen, unverified=unverified
             )
         raise ResolutionError(
-            "No verified combination satisfies "
-            + ", ".join(capabilities)
-            + f" on {self._platform}:\n  "
-            + "\n  ".join(failures)
-            + "\n"
-            + remedy
+            "Not yet validated: "
+            + "; ".join(unverified)
+            + ".\nRun it as an experiment with --unverified; the lock will record "
+            "what is unvalidated for everyone who uses it."
         )
 
     def _selected_surface(self, capabilities: tuple[str, ...]) -> str:
@@ -306,8 +296,9 @@ class ResolutionMatrix:
 
     def _verified_selection(
         self, required: list[str], base: _BasePin
-    ) -> tuple[dict[str, _ComponentPin] | None, str]:
-        """The newest verified pin of every required component on this base."""
+    ) -> dict[str, _ComponentPin] | None:
+        """The newest verified pin of every required component on this base,
+        or None when some component or coupling lacks verification there."""
 
         chosen: dict[str, _ComponentPin] = {}
         for component_id in required:
@@ -320,10 +311,7 @@ class ResolutionMatrix:
                 None,
             )
             if pin is None:
-                return None, (
-                    f"no verified {component_id} version against base {base.mnemonic} "
-                    f"(substrate {base.substrate})"
-                )
+                return None
             chosen[component_id] = pin
         for coupling in self._couplings:
             if coupling.first_id in chosen and coupling.second_id in chosen:
@@ -332,11 +320,8 @@ class ResolutionMatrix:
                     chosen[coupling.second_id].version,
                 )
                 if pair not in coupling.verified:
-                    return None, (
-                        f"{coupling.first_id} {pair[0]} and {coupling.second_id} "
-                        f"{pair[1]} have no jointly verified integration"
-                    )
-        return chosen, ""
+                    return None
+        return chosen
 
     def _unverified_selection(
         self, required: list[str], base_needs: set[str]
@@ -347,7 +332,8 @@ class ResolutionMatrix:
         a needed toolchain cannot be forced.  Verification is the only rule
         relaxed: components keep their newest verified pin where one exists
         on the base's substrate and fall back to their newest pin otherwise,
-        with every such fallback (and every unverified coupling) named.
+        with every such fallback (and every unverified coupling) named in
+        the words the user reads: component, version, base.
         """
 
         best: tuple[_BasePin, dict[str, _ComponentPin], tuple[str, ...]] | None = None
@@ -372,10 +358,7 @@ class ResolutionMatrix:
                     continue
                 newest = pins[-1]
                 chosen[component_id] = newest
-                unverified.append(
-                    f"{component_id} {newest.version} on base {base.mnemonic} "
-                    f"(substrate {base.substrate})"
-                )
+                unverified.append(f"{component_id} {newest.version} on base {base.mnemonic}")
             for coupling in self._couplings:
                 if coupling.first_id in chosen and coupling.second_id in chosen:
                     pair = (
@@ -385,8 +368,7 @@ class ResolutionMatrix:
                     if pair not in coupling.verified:
                         unverified.append(
                             f"{coupling.first_id} {pair[0]} with "
-                            f"{coupling.second_id} {pair[1]} (no jointly "
-                            "verified integration)"
+                            f"{coupling.second_id} {pair[1]} (integration not validated)"
                         )
             if best is None or len(unverified) < len(best[2]):
                 best = (base, chosen, tuple(unverified))
@@ -433,10 +415,11 @@ class ResolutionMatrix:
             # scalar; collaborators regenerating the lock see the same warning.
             document["unverified-combinations"] = "; ".join(unverified)
             header += (
-                "# WARNING: generated past the verified matrix at the owner's "
-                "request; see unverified-combinations.\n"
+                "# WARNING: an experiment. Not yet validated: "
+                + "; ".join(unverified)
+                + ".\n"
             )
-            provenance += f" (unverified: {'; '.join(unverified)})"
+            provenance += f" (experiment; not yet validated: {'; '.join(unverified)})"
         return Formation(
             capabilities=capabilities,
             provenance=provenance,

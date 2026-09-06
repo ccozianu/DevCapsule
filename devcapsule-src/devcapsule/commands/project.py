@@ -624,6 +624,15 @@ class ConfigNeedCommand(Command):
             metavar="CAPABILITY",
             help="Capability to add to capabilities.need; repeatable.",
         )
+        parser.add_argument(
+            "--unverified",
+            action="store_true",
+            dest="allow_unverified",
+            help=(
+                "If the grown need has no fully validated combination, run it as "
+                "an experiment; the regenerated lock names what is unvalidated."
+            ),
+        )
         add_carrier_options(parser, families=("authorize",))
 
     @classmethod
@@ -641,6 +650,7 @@ class ConfigNeedCommand(Command):
             _project_context(context).target_path(),
             arguments.capabilities,
             answers,
+            allow_unverified=arguments.allow_unverified,
         )
         print(report.render())
         return 0

@@ -918,12 +918,13 @@ def test_init_unverified_resolves_past_the_matrix_with_a_gentle_warning(
         # only on gen1 and antigravity only on gen2: no fully verified base
         # exists, and the strict form refuses.
         assert cli.main(need) == 2
-        assert "No verified combination" in capsys.readouterr().err
+        refusal = capsys.readouterr().err
+        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Run it as an experiment with --unverified" in refusal
 
         assert cli.main([*need, "--unverified"]) == 0
         warning = capsys.readouterr().err
-        assert "no verification for" in warning
-        assert "pycharm" in warning
+        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in warning
 
     lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
     assert "pycharm" in lock["unverified-combinations"]
@@ -1195,3 +1196,43 @@ def test_operation_batch_failure_is_an_elicitation_incomplete(tmp_path: Path) ->
                     directory=project, need=("python-ide",), interactive=False
                 )
             )
+
+
+def test_config_need_offers_and_accepts_the_experiment_lever(tmp_path: Path, capsys) -> None:
+    """The refusal's remedy must be reachable from the command that printed
+    it (owner ruling 2026-09-06): `config need` takes --unverified too."""
+
+    project = tmp_path / "fresh-project"
+    project.mkdir()
+    grow = [
+        "project",
+        "--path",
+        str(project),
+        "config",
+        "need",
+        "antigravity-agent",
+        "--authorize",
+        "base-image",
+        "default",
+        "--authorize",
+        "antigravity-download",
+        "true",
+    ]
+    with patch.dict(os.environ, isolated_env(tmp_path), clear=False), sparse_matrix():
+        assert cli.main(full_init_command(project)) == 0
+        capsys.readouterr()
+
+        assert cli.main(grow) == 2
+        refusal = capsys.readouterr().err
+        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Run it as an experiment with --unverified" in refusal
+        manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
+        assert manifest["capabilities"]["need"] == ["python", "python-ide"]
+
+        assert cli.main([*grow, "--unverified"]) == 0
+        warning = capsys.readouterr().err
+        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1" in warning
+        manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
+        assert manifest["capabilities"]["need"] == ["antigravity-agent", "python", "python-ide"]
+        lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
+        assert lock["unverified-combinations"] == "pycharm 2026.2.0.1 on base v0.2.9"

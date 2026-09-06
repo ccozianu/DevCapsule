@@ -2,21 +2,16 @@
 
 Date opened: 2026-09-03
 
-Status: **fixed 2026-09-05** on `component-catalog/antigravity-cli` at
-the owner's direction, with one ruling sharpening the scope: *every*
-refusal names `--unverified` — adopters must be able to try new
-components and bases ahead of the matrix and report back. As
-implemented: the refusal lists each base's gap on its own line, newest
-first (replaying the symptom command now leads with "v0.2.9: no
-verified pycharm version"); the remedy sentence names `--unverified`
-and states the one thing it cannot bypass (a base that does not ship a
-needed toolchain); and a refusal reached *with* `--unverified` already
-passed says the flag cannot help instead of recommending it again.
-Regression tests cover the newest-first ordering, the remedy line, and
-the exhausted-flag wording. Closes on the owner seeing the new message
-in practice. Originally reported by the product owner while spinning
-the three-provider demo formations (v0.2.9 stretch, matrix
-`embedded-11`)
+Status: **closed 2026-09-06.** The 2026-09-05 fix (every base's gap named,
+newest first; every refusal naming `--unverified`) was superseded the next
+day by the owner's ruling that a missing validation is disclosed, not
+refused: the message now names only the elements the experiment would run
+— component, version, base — and offers `--unverified`, which `config
+need` also accepts; only a base missing a required toolchain refuses
+outright. The owner saw both generations of the message in practice
+(regenerating the trading-research sample's lock). Recorded in the D-0007
+amendment of 2026-09-06 and the V1 user-experience note's *When Init
+Refuses, And When It Only Discloses*.
 
 Requirements: R-PRODUCT-001
 
