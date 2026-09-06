@@ -290,18 +290,39 @@ recorded.
 **Superseded 2026-09-06.** v0.2.9 was tagged and published on 2026-09-05
 (PEX on GitHub Releases, base on Docker Hub) with Codex effectively
 broken — the single-binary extraction fixed the same day, after the tag
-(PR #56). The owner withdraws 0.2.9 from GitHub and Docker Hub; the
-target is **v0.2.10**, with a provision: everything is validated first
-on the two sample projects — trading-research (PyCharm × three agents)
-and tictactoe (Codium × three agents) — and only then is the dogfood
-project migrated to the three-agent configuration. Because the v0.2.9
-base digests go with the withdrawal, the matrix pin moves to a new base
-built from the 0.2.10 revision, walking the release note's dependency
-cycle: land content → bump to 0.2.10 → build the PEX → build and push
-the base as `v0.2.10` → repin (matrix bump, sample and dogfood locks
-regenerated) → sample smokes → dogfood smoke → tag. A release-candidate
-concept to make that walk routine went to `project-management` as
-intake 2026-09-06. The original v0.2.9 gate list follows for the record;
+(PR #56). The target is **v0.2.10**; 0.2.9 is withdrawn from GitHub and
+Docker Hub only after 0.2.10 is pushed and validated (order settled
+2026-09-06, so no lock ever pins a digest that has vanished), with a
+provision: everything is validated first on the two sample projects —
+trading-research (PyCharm × three agents) and tictactoe (Codium × three
+agents) — and only then is the dogfood project migrated to the
+three-agent configuration. The walk follows the release note's
+dependency cycle: land content → bump to 0.2.10 → build the PEX → build
+and push the base as `v0.2.10` → repin (matrix bump, sample and dogfood
+locks regenerated) → sample smokes → dogfood smoke → tag → withdraw
+0.2.9. A release-candidate concept to make that walk routine went to
+`project-management` as intake 2026-09-06.
+
+**Walk status, 2026-09-06 afternoon.** The owner smoked trading-research
+on the locally built 0.2.10 base and the local PEX ("worked nicely").
+Then, from inside the dogfood capsule: a strict PEX was built from the
+pushed revision `bd8283b` in a clean worktree (source verification:
+public GitHub commit reachable); the base was built from it with recipe
+6 and pushed as `docker.io/mycodespaceai/devcapsule-base:v0.2.10`,
+registry digest `sha256:76a07cb9e72158f810b32598eb05f9a375f8e4748b80b6eac04c403798d39a45`
+(13:50 UTC; the owner approved the push after seeing the image's
+labels). The build needed `--network host`: the daemon's bridge network
+hands containers nameservers on 100.100.x that they cannot reach, so
+`apt-get update` fails under the default build network on this host —
+an environment fact, not a recipe defect. The matrix pins v0.2.10 as
+the newest base in the family (`embedded-17`); golden locks, both
+sample locks (committed and pushed on each sample's
+`three-provider-formation` branch), and the dogfood lock are on it, and
+the dogfood manifest now needs `antigravity-agent` — the three-agent
+configuration. Remaining: the owner's smoke of tictactoe and of the
+dogfood project on the pushed base, the two PRs (workstream branch,
+outbox), the `v0.2.10` tag, then the 0.2.9 withdrawal and the v0.2.9
+pin's retirement. The original v0.2.9 gate list follows for the record;
 its open items carry over.
 
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
@@ -413,6 +434,40 @@ entry is safe to restore by hand-copy. A guided `config history`/
 `restore` command surface is recorded follow-on work in the decision.
 
 ## Next Resumable Task
+
+**Paused 2026-09-06 (afternoon), everything committed and pushed;
+working tree clean.** Branch `component-catalog/antigravity-cli` at
+`b941258` (PR #57 merged the morning's work; the afternoon's commits
+`18b2938`…`b941258` await the next PR). Outbox at `ba4c2bf` with the
+blog and five intake items, awaiting its PR. The state to re-verify on
+resume, in order:
+
+1. **Owner actions outstanding** (nothing for the agent until they
+   land): smoke tictactoe and the dogfood project on the pushed
+   v0.2.10 base (`docker.io/mycodespaceai/devcapsule-base:v0.2.10`,
+   digest `sha256:76a07cb9…d39a45`; clients in `devcapsule-src/dist/`:
+   `devcapsule-0.2.10-bd8283b.pex` strict, `devcapsule-local.pex`
+   local); merge the workstream PR and the outbox PR; tag `v0.2.10`;
+   withdraw 0.2.9 from GitHub and Docker Hub.
+2. **Agent follow-ups, gated on those**: retire the `v0.2.9` pin from
+   the matrix once 0.2.9 is withdrawn (explicit retirement, D-0007);
+   convert the provisional entries the smokes evidence (PyCharm,
+   claude-code 2.1.236/2.1.261, codex 0.153.0/0.153.4) and close the
+   codex bug record and the formation-identity record's entrypoint
+   half on the "reused canonical environment" second run.
+3. **Open Threads** below carry the rest; the ones the owner is most
+   likely to pick up next: the `config need` layering ruling (point
+   (a)), the `use_legacy_landlock` deprecation at the next codex
+   advance, and `resolve`/`run` not yet reading
+   `unverified-combinations` back to a collaborator.
+
+Deliberately not preserved: the scratch checkouts
+`/home/devcapsule/codium-smoke-tictactoe` and
+`/home/devcapsule/codex-seed-smoke` (host-backed, reusable but
+disposable), the smoke formations they built, and the session's
+scratchpad. Environment fact worth remembering: base builds from this
+capsule need `images build --network host`; the daemon's bridge network
+cannot resolve DNS here.
 
 Session paused 2026-09-03, everything committed and pushed. The
 2026-09-02 pause state below is superseded by the day's entries above
@@ -558,6 +613,18 @@ its ruling thread open):
 
 ## Open Threads
 
+- **One base family, named plainly** (owner direction 2026-09-06,
+  implemented on the branch, matrix `embedded-16`): `postgresql-client`
+  gained its validation on the current family (package identity checked
+  in the v0.2.9 image: psql 16.14, the build v026 shipped), which was the
+  last thing keeping v026 selectable; v026 and the validations recorded
+  only against it are retired; `substrate` is renamed `base_family` on
+  `_BasePin` and `_VerifiedEdge` with documentation, and the single
+  family is `ubuntu-24.04`. Recorded as D-0007's second 2026-09-06
+  amendment; the release note's naming bullet follows. The wider rename
+  (`_VerifiedEdge` itself, "edge" in identifiers) stays with the
+  resolution-matrix cleanup backlog item. Golden locks regenerated
+  (`pycharm-full` moves from v026 to v0.2.9).
 - **`init --regenerate` versus `config`** (owner decision 2026-09-06:
   leave current `init` as acceptable for now; settle the semantics in
   `project-management`): a systematic walk found five gaps between what
@@ -570,6 +637,13 @@ its ruling thread open):
   sole remedy. The owner's principle: init operates on the source tree's
   `.devcapsule`, and updates the local run configuration only as a
   convenience; `config` owns the local half. Sent as intake 2026-09-06.
+  Fixed the same day without waiting for the ruling (`eb395fa`): the
+  report's value/justification swap (the intake's point 4), and
+  `config need` now prints its own report — need changed or unchanged,
+  lock regenerated or byte-identical, and every authorization node by
+  how it was settled (answered, standing from the record, or applied as
+  a project recommendation) — instead of init's "Project initialized".
+  The layering itself is untouched and stays with the two items.
 - **Refusal UX and the matrix's vocabulary** (ruled 2026-09-06): the
   owner took stock of every refusal, its grounds, and its audience
   (recorded as the first entry of the new `engineering-docs/blog/`) and

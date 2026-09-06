@@ -233,3 +233,35 @@ matrix change on mainline on the existence of a claim that every added
 combination has run successfully. Until then, matrix entries advance at
 the owner's direction with their evidence string, provisional entries
 included.
+
+## Amendment 2026-09-06 (second): One Base Family, Named Plainly
+
+Decided by the product owner while retiring the 0.2.9 release. Two
+facts drove it: the older generation was still active in exactly one
+place — `postgresql-client` had a validation only against it, so every
+need naming that capability resolved to v026 — and the field carrying
+the generation, `substrate`, was the one identifier in the model that
+did not explain itself.
+
+- **Vocabulary.** The compatibility unit of the 2026-09-02 amendment is
+  now called the **base family**: the family of base releases a
+  validation holds for. `_BasePin.base_family` and
+  `_VerifiedEdge.base_family` carry it, documented in place. The
+  `ubuntu-24.04-gen1` / `-gen2` names are gone; the one family in use is
+  `ubuntu-24.04`. A new family is opened, and named, only for a
+  substantial base change (new OS release, toolchain overhaul, a
+  runtime-plan vocabulary older releases cannot execute).
+- **Retirement.** The v026 pin
+  (`docker.io/mycodespaceai/devcapsule-base@sha256:695f9eb6…`) and every
+  validation recorded only against its family are retired, per decision
+  point 1 (retirement is explicit, never an implicit effect of adding
+  newer entries). Nothing selected v026 once `postgresql-client` gained
+  its entry.
+- **`postgresql-client`.** A base-shipped component's validation is that
+  the base carries the package its pin describes; checked in the v0.2.9
+  image on 2026-09-06 (`psql 16.14`, the same Ubuntu build v026 shipped)
+  and recorded as its entry's evidence.
+- **Internal naming.** Commit subjects and records name what changed for
+  whom — component, version, base, evidence status — not the model's
+  words; the house style is with `project-management` (intake
+  2026-09-06).

@@ -59,7 +59,7 @@ class ResolutionError(ProjectConfigurationError):
     """
 
 
-_MATRIX_VERSION = "embedded-15"
+_MATRIX_VERSION = "embedded-17"
 
 
 # --------------------------------------------------------------------------
@@ -73,31 +73,34 @@ class _BasePin:
     """One published base image and the capabilities it ships."""
 
     mnemonic: str
-    # The compatibility generation this base belongs to. Verified edges key
-    # on the substrate, not the mnemonic: what a smoke establishes is that a
-    # component runs on this OS/toolchain surface, and our own base releases
-    # on the same substrate (rebuilds varying only the embedded runtime PEX)
-    # inherit that verification instead of each demanding a fresh smoke.
-    # Ruled 2026-09-02 by the product owner (amending D-0007); bumping the
-    # substrate string is the deliberate act reserved for substantial base
-    # changes — a new OS release, a toolchain overhaul, or a runtime-plan
-    # vocabulary the older generation cannot execute.
-    substrate: str
+    # The family of base releases this pin belongs to — see _VerifiedEdge:
+    # a validation is recorded against the family, so every release in it
+    # (rebuilds that vary only DevCapsule's own layer, such as the embedded
+    # runtime PEX) inherits the validation instead of demanding a fresh
+    # smoke. Opening a new family is a deliberate act for a substantial
+    # change — a new OS release, a toolchain overhaul, or a runtime-plan
+    # vocabulary older releases cannot execute (owner rulings 2026-09-02
+    # and 2026-09-06, amending D-0007).
+    base_family: str
     satisfies: frozenset[str]
     lock_table: Mapping[str, Any]
 
 
 @dataclass(frozen=True)
 class _VerifiedEdge:
-    """A tested (component version, base substrate) pair, with its evidence.
+    """One validated (component version, base family) pair and its evidence.
 
-    The evidence string names the concrete base the smoke ran on; the edge
-    itself holds for every base pin sharing that substrate.
+    ``base_family`` names the family of base releases the validation holds
+    for, not one base: a smoke establishes that the component runs on that
+    OS and toolchain surface, and every base pin declaring the same family
+    inherits the result. ``evidence`` says what established it — which
+    smoke, on which concrete base, when — or that the entry is provisional
+    and what would convert it.
     """
 
     component_id: str
     component_version: str
-    substrate: str
+    base_family: str
     evidence: str
 
 
@@ -171,7 +174,7 @@ class ResolutionMatrix:
         self._bases = bases
         self._components = components
         self._verified = {
-            (edge.component_id, edge.component_version, edge.substrate): edge
+            (edge.component_id, edge.component_version, edge.base_family): edge
             for edge in edges
         }
         self._couplings = couplings
@@ -306,7 +309,7 @@ class ResolutionMatrix:
                 (
                     candidate
                     for candidate in reversed(self._components[component_id])
-                    if (component_id, candidate.version, base.substrate) in self._verified
+                    if (component_id, candidate.version, base.base_family) in self._verified
                 ),
                 None,
             )
@@ -331,7 +334,7 @@ class ResolutionMatrix:
         Base capabilities stay a hard constraint — a base that does not ship
         a needed toolchain cannot be forced.  Verification is the only rule
         relaxed: components keep their newest verified pin where one exists
-        on the base's substrate and fall back to their newest pin otherwise,
+        in the base's family and fall back to their newest pin otherwise,
         with every such fallback (and every unverified coupling) named in
         the words the user reads: component, version, base.
         """
@@ -348,7 +351,7 @@ class ResolutionMatrix:
                     (
                         candidate
                         for candidate in reversed(pins)
-                        if (component_id, candidate.version, base.substrate)
+                        if (component_id, candidate.version, base.base_family)
                         in self._verified
                     ),
                     None,
@@ -430,39 +433,27 @@ class ResolutionMatrix:
 
 
 # --------------------------------------------------------------------------
-# The verified data. Pins below are lock fragments verbatim; edges record
-# what verified each (component version, base version) pair; advancing the
+# The validated data. Pins below are lock fragments verbatim; edges record
+# what validated each (component version, base family) pair; advancing the
 # generated formation advances _MATRIX_VERSION.
 
-# Substrate generations (owner ruling 2026-09-02, amending D-0007): edges
-# verify component-on-substrate, so base releases sharing a substrate share
-# edges. The gen1→gen2 boundary is the runtime-plan vocabulary: gen2 bases
-# embed a runtime that executes vscode-adapter plans, which gen1 predates.
-_SUBSTRATE_GEN1 = "ubuntu-24.04-gen1"
-_SUBSTRATE_GEN2 = "ubuntu-24.04-gen2"
+# Base families (owner rulings 2026-09-02 and 2026-09-06, amending D-0007):
+# validations are recorded per family, so base releases in the same family
+# share them. One family exists today. The older one — ubuntu-24.04 bases
+# up to v026, whose embedded runtime predated the vscode-adapter runtime
+# plans — was retired on 2026-09-06 together with the v026 pin
+# (docker.io/mycodespaceai/devcapsule-base@sha256:695f9eb6…3ec07394a) and
+# the validations recorded only against it, once no need selected it any
+# more; D-0007 makes retirement an explicit act, recorded here.
+_BASE_FAMILY_UBUNTU_24_04 = "ubuntu-24.04"
 
-_V026_BASE = _BasePin(
-    mnemonic="v026",
-    substrate=_SUBSTRATE_GEN1,
-    # Recipe version 4 ships CPython, the Docker CLI suite, Node.js, and the
-    # Temurin JDK plus Maven; these capabilities are therefore satisfied by
-    # the base and never a lock entry.
-    satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
-    lock_table={
-        "reference": (
-            "docker.io/mycodespaceai/devcapsule-base"
-            "@sha256:695f9eb6dd269dc694b3367f6a2570d500b938998d6f7aa3aa00e5d04cc7394a"
-        ),
-        "build-mnemonic": "v026",
-    },
-)
-
-# The v0.2.8 base (recipe version 5, same shipped toolchain) embeds a runtime
-# PEX that understands the vscode adapter, which v026 predates — the gen2
-# substrate; later gen2 releases inherit its verified edges.
+# The v0.2.8 base (recipe version 5) ships CPython, the Docker CLI suite,
+# Node.js, the Temurin JDK plus Maven, and the PostgreSQL client; these
+# capabilities are satisfied by the base and never a lock entry. Its
+# embedded runtime PEX understands the vscode adapter.
 _V0_2_8_BASE = _BasePin(
     mnemonic="v0.2.8",
-    substrate=_SUBSTRATE_GEN2,
+    base_family=_BASE_FAMILY_UBUNTU_24_04,
     satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
     lock_table={
         "reference": (
@@ -473,13 +464,15 @@ _V0_2_8_BASE = _BasePin(
     },
 )
 
-# The v0.2.9 base is a gen2 rebuild (recipe version 5, same toolchain)
-# embedding the 0.2.9 runtime; it inherits gen2's verified edges per the
-# 2026-09-02 substrate ruling. Pushed by the owner 2026-09-02; digest read
-# from the registry at pinning time.
+# The v0.2.9 base is a rebuild in the same family (recipe version 5, same
+# toolchain) embedding the 0.2.9 runtime, so it inherits the family's
+# validations. Pushed by the owner 2026-09-02; digest read from the
+# registry at pinning time. Superseded by v0.2.10 below; the 0.2.9
+# release is withdrawn once 0.2.10 is validated (owner decision
+# 2026-09-06), and this pin retires with it.
 _V0_2_9_BASE = _BasePin(
     mnemonic="v0.2.9",
-    substrate=_SUBSTRATE_GEN2,
+    base_family=_BASE_FAMILY_UBUNTU_24_04,
     satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
     lock_table={
         "reference": (
@@ -487,6 +480,26 @@ _V0_2_9_BASE = _BasePin(
             "@sha256:ca9f79619fc0709a13e6a66de8959cda55dd47c23ec073fe0eb353de32734232"
         ),
         "build-mnemonic": "v0.2.9",
+    },
+)
+
+# The v0.2.10 base (recipe version 6: no boot contract in the base, the
+# formation recipe sets its own) embeds the 0.2.10 runtime built from the
+# published revision bd8283b; same family, same toolchain, so it inherits
+# every validation. Built with host networking and pushed 2026-09-06
+# 13:50 UTC; digest read from the registry after the push. Its evidence
+# is the owner's 2026-09-06 trading-research smoke on the locally built
+# twin (identical recipe and packages; only the embedded PEX differs).
+_V0_2_10_BASE = _BasePin(
+    mnemonic="v0.2.10",
+    base_family=_BASE_FAMILY_UBUNTU_24_04,
+    satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
+    lock_table={
+        "reference": (
+            "docker.io/mycodespaceai/devcapsule-base"
+            "@sha256:76a07cb9e72158f810b32598eb05f9a375f8e4748b80b6eac04c403798d39a45"
+        ),
+        "build-mnemonic": "v0.2.10",
     },
 )
 
@@ -747,12 +760,10 @@ _POSTGRESQL_CLIENT_16 = _ComponentPin(
     },
 )
 
-_DOGFOOD_E2E = "recursive dogfood E2E (embedded-2 formation)"
-
 _LINUX_AMD64_MATRIX = ResolutionMatrix(
     platform=Platform.LINUX_AMD64,
     matrix_version=_MATRIX_VERSION,
-    bases=(_V026_BASE, _V0_2_8_BASE, _V0_2_9_BASE),
+    bases=(_V0_2_8_BASE, _V0_2_9_BASE, _V0_2_10_BASE),
     components={
         "pycharm": (_PYCHARM_2026_2_0_1,),
         "codium": (_CODIUM_1_126_04524,),
@@ -766,128 +777,83 @@ _LINUX_AMD64_MATRIX = ResolutionMatrix(
         "postgresql-client": (_POSTGRESQL_CLIENT_16,),
     },
     edges=(
-        _VerifiedEdge("pycharm", "2026.2.0.1", _SUBSTRATE_GEN1, _DOGFOOD_E2E),
-        # The owner's 2026-09-05 dogfood day: the repository's own
-        # formation (pycharm x claude-code x codex) ran all day on the
-        # owner's v0.2.9 rebuild — a gen2 base by substrate, though a local
-        # image ID rather than the pinned registry digest — with this
-        # workstream developing inside it. Provisional until a recorded
-        # formation run names a pinned gen2 base; it lets every PyCharm
-        # composition resolve to v0.2.9 without --unverified.
+        # Every entry names the concrete base its evidence came from; the
+        # validation holds for the whole family. "provisional" entries were
+        # added at the owner's direction ahead of a smoke and say what
+        # converts them.
         _VerifiedEdge(
             "pycharm",
             "2026.2.0.1",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "provisional: owner's 2026-09-05 dogfood session on the local "
-            "v0.2.9 rebuild (formation e52aa7f4934b232e7972)",
+            "v0.2.9 rebuild (formation e52aa7f4934b232e7972); converts on a "
+            "recorded formation run naming a pinned base",
         ),
         _VerifiedEdge(
             "codium",
             "1.126.04524",
-            _SUBSTRATE_GEN1,
-            "product-owner live smoke 2026-08-31 (current-tree runtime PEX override)",
-        ),
-        _VerifiedEdge(
-            "codium",
-            "1.126.04524",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "product-owner smoke 2026-09-02: tictactoe sample on the v0.2.8 "
             "base (config-history 20260902T075529Z)",
         ),
-        _VerifiedEdge("codex", "0.145.0", _SUBSTRATE_GEN1, _DOGFOOD_E2E),
         _VerifiedEdge(
             "codex",
             "0.145.0",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "product-owner smoke 2026-09-03: five-way formation (codium x "
             "antigravity x claude-code x codex) on the v0.2.9 base",
         ),
-        # 0.153.0 advances the pin at the owner's direction 2026-09-03; both
-        # substrate edges are provisional pending the next dogfood run (gen1)
-        # and the demo-project spins (gen2), per the provisional-edge
-        # precedent.
         _VerifiedEdge(
             "codex",
             "0.153.0",
-            _SUBSTRATE_GEN1,
-            "provisional: owner-directed CLI update 2026-09-03, pending the "
-            "next dogfood run",
-        ),
-        _VerifiedEdge(
-            "codex",
-            "0.153.0",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "provisional: owner-directed CLI update 2026-09-03, pending the "
             "demo-project three-provider spins",
         ),
-        # 0.153.4 advances the pin with the npm delivery rebuild at the
-        # owner's direction 2026-09-05; both substrate edges are provisional
-        # pending the owner's smoke of a codex-carrying formation with the
-        # npm layout and the seeded configuration, per the provisional-edge
-        # precedent.
         _VerifiedEdge(
             "codex",
             "0.153.4",
-            _SUBSTRATE_GEN1,
-            "provisional: owner-directed CLI update 2026-09-05, pending the "
-            "next dogfood run on the npm layout",
+            _BASE_FAMILY_UBUNTU_24_04,
+            "provisional: owner-directed CLI update 2026-09-05 with the npm "
+            "delivery and the seeded configuration, pending the owner's "
+            "sample-project smokes",
         ),
-        _VerifiedEdge(
-            "codex",
-            "0.153.4",
-            _SUBSTRATE_GEN2,
-            "provisional: owner-directed CLI update 2026-09-05, pending the "
-            "owner's codium formation smoke on the npm layout",
-        ),
-        _VerifiedEdge("claude-code", "2.1.227", _SUBSTRATE_GEN1, _DOGFOOD_E2E),
         _VerifiedEdge(
             "claude-code",
             "2.1.227",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "product-owner smoke 2026-09-03: five-way formation (codium x "
             "antigravity x claude-code x codex) on the v0.2.9 base",
         ),
-        # 2.1.236 advances the pin at the owner's direction 2026-09-03 (the
-        # Fable 5.1 update for us and adopters); both substrate edges are
-        # provisional pending the next dogfood run (gen1) and codium smoke
-        # (gen2), per the provisional-edge precedent.
         _VerifiedEdge(
             "claude-code",
             "2.1.236",
-            _SUBSTRATE_GEN1,
-            "provisional: owner-directed CLI update 2026-09-03, pending the "
-            "next dogfood run",
-        ),
-        _VerifiedEdge(
-            "claude-code",
-            "2.1.236",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "provisional: owner-directed CLI update 2026-09-03, pending the "
             "next codium-formation smoke",
         ),
-        # 2.1.261 advances the pin at the owner's direction 2026-09-04; both
-        # substrate edges are provisional pending the next dogfood run (gen1)
-        # and the demo-project spins (gen2), per the provisional-edge
-        # precedent.
         _VerifiedEdge(
             "claude-code",
             "2.1.261",
-            _SUBSTRATE_GEN1,
-            "provisional: owner-directed CLI update 2026-09-04, pending the "
-            "next dogfood run",
-        ),
-        _VerifiedEdge(
-            "claude-code",
-            "2.1.261",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "provisional: owner-directed CLI update 2026-09-04, pending the "
             "demo-project three-provider spins",
         ),
-        _VerifiedEdge("postgresql-client", "16", _SUBSTRATE_GEN1, _DOGFOOD_E2E),
+        # A base-shipped component: the validation is that the base carries
+        # the package the pin describes. Checked hands-on 2026-09-06 in the
+        # v0.2.9 image: psql (PostgreSQL) 16.14, Ubuntu package
+        # 16+257build1.1, identical to the retired v026 base's.
+        _VerifiedEdge(
+            "postgresql-client",
+            "16",
+            _BASE_FAMILY_UBUNTU_24_04,
+            "package identity checked in the v0.2.9 base image 2026-09-06 "
+            "(psql 16.14, the same build the retired v026 base shipped)",
+        ),
         _VerifiedEdge(
             "antigravity-cli",
             "1.1.24",
-            _SUBSTRATE_GEN2,
+            _BASE_FAMILY_UBUNTU_24_04,
             "product-owner smoke 2026-09-02: antigravity working the "
             "tictactoe sample (codium surface, v0.2.8 base)",
         ),

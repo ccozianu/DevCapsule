@@ -23,12 +23,12 @@ from devcapsule.platforms import Platform
 from devcapsule.resolution_matrix import MATRICES, ResolutionMatrix
 
 
-def matrix_without_pycharm_on_gen2() -> ResolutionMatrix:
-    """The embedded matrix as it stood before PyCharm's gen2 edge (2026-09-05).
+def matrix_without_antigravity_validation() -> ResolutionMatrix:
+    """The embedded matrix with the Antigravity CLI's validation removed.
 
-    Tests of behaviour that needs a need with *no* fully verified base —
-    PyCharm plus antigravity, which is verified only on gen2 — rebuild that
-    state from the real pins rather than freezing a copy of them.
+    Tests of behaviour that needs a need with *no* fully validated base —
+    here PyCharm plus antigravity — rebuild that state from the real pins
+    rather than freezing a copy of them.
     """
 
     real = MATRICES[Platform.LINUX_AMD64]
@@ -38,9 +38,7 @@ def matrix_without_pycharm_on_gen2() -> ResolutionMatrix:
         bases=real._bases,
         components=real._components,
         edges=tuple(
-            edge
-            for edge in real._verified.values()
-            if not (edge.component_id == "pycharm" and edge.substrate.endswith("gen2"))
+            edge for edge in real._verified.values() if edge.component_id != "antigravity-cli"
         ),
         couplings=real._couplings,
         surface_capabilities=real._surface_capabilities,
@@ -54,7 +52,7 @@ def sparse_matrix():
 
     return patch(
         "devcapsule.project_operations.MATRICES",
-        {Platform.LINUX_AMD64: matrix_without_pycharm_on_gen2()},
+        {Platform.LINUX_AMD64: matrix_without_antigravity_validation()},
     )
 
 
@@ -166,7 +164,7 @@ def test_repeated_init_applies_carried_answers_to_the_standing_checkout(
         assert cli.main(full_init_command(project)) == 0
         output = capsys.readouterr().out
         assert "Kept" in output
-        assert "Authorized for this checkout: base-image." in output
+        assert "Answered for this checkout: base-image." in output
         assert "Project initialized; 'devcapsule project run' starts it." in output
 
 
@@ -214,7 +212,28 @@ def test_config_need_grows_the_project_and_preserves_authored_content(
             == 0
         )
         output = capsys.readouterr().out
-        assert "Project initialized; 'devcapsule project run' starts it." in output
+        # The need verb reports what it changed, not an initialization.
+        assert "Need: added postgresql-client → postgresql-client python python-ide" in output
+        assert "Lock: regenerated " in output
+        assert "Answered for this checkout: base-image." in output
+        assert "Ready; 'devcapsule project run' starts it." in output
+        assert "Project initialized" not in output
+
+        # Asking for a capability the project already needs converges: the
+        # manifest is not rewritten, the lock is byte-identical, and every
+        # authorization stands from the record rather than being re-granted.
+        capsys.readouterr()
+        assert (
+            cli.main(
+                ["project", "--path", str(project), "config", "need", "postgresql-client"]
+            )
+            == 0
+        )
+        output = capsys.readouterr().out
+        assert "Need: unchanged — already in capabilities.need" in output
+        assert "Lock: unchanged (base " in output
+        assert "Standing from the existing checkout record: base-image." in output
+        assert "Answered for this checkout" not in output
 
         manifest_text = manifest_path.read_text(encoding="utf-8")
         assert 'need = ["postgresql-client", "python", "python-ide"]' in manifest_text
@@ -326,7 +345,7 @@ def test_init_repairs_a_deleted_checkout_config_tree(tmp_path: Path, capsys) -> 
         # and a fresh resolution.
         assert cli.main(full_init_command(project)) == 0
         output = capsys.readouterr().out
-        assert "Authorized for this checkout: base-image." in output
+        assert "Answered for this checkout: base-image." in output
         restored = next(config_root.rglob("devcapsule.checkout.toml"))
         assert read_toml(restored)["authorization"]["base-image"]["reference"] == (
             matrix_base_reference()
@@ -610,7 +629,9 @@ def test_interactive_init_prompts_in_the_settled_order(tmp_path: Path) -> None:
     assert "[default]" in transcript
     manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
     assert "host" not in manifest
-    assert report.authorized == ("base-image",)
+    assert report.answered == ("base-image",)
+    assert report.carried == ()
+    assert report.recommended == ()
     assert report.capabilities == ("python", "python-ide")
 
 
@@ -914,20 +935,19 @@ def test_init_unverified_resolves_past_the_matrix_with_a_gentle_warning(
         "true",
     ]
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False), sparse_matrix():
-        # In the matrix as it stood before 2026-09-05, PyCharm was verified
-        # only on gen1 and antigravity only on gen2: no fully verified base
-        # exists, and the strict form refuses.
+        # With antigravity's validation removed no fully validated base
+        # exists, and the strict form discloses the gap and the experiment.
         assert cli.main(need) == 2
         refusal = capsys.readouterr().err
-        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Not yet validated: antigravity-cli 1.1.24 on base v0.2.10." in refusal
         assert "Run it as an experiment with --unverified" in refusal
 
         assert cli.main([*need, "--unverified"]) == 0
         warning = capsys.readouterr().err
-        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in warning
+        assert "Running as an experiment. Not yet validated: antigravity-cli 1.1.24 on base v0.2.10." in warning
 
     lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
-    assert "pycharm" in lock["unverified-combinations"]
+    assert "antigravity-cli" in lock["unverified-combinations"]
     lock_text = (project / ".devcapsule" / "devcapsule.linux-amd64.lock").read_text(
         encoding="utf-8"
     )
@@ -1090,7 +1110,7 @@ def test_interactive_init_offers_the_default_agent(tmp_path: Path) -> None:
         )
     assert "default agent component (antigravity-agent)" in prompts.getvalue()
     assert report.capabilities == ("antigravity-agent", "frontend-ide", "node")
-    assert "antigravity-download" in report.authorized
+    assert "antigravity-download" in report.answered
     manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
     assert manifest["capabilities"]["need"] == ["antigravity-agent", "frontend-ide", "node"]
 
@@ -1109,14 +1129,14 @@ def test_interactive_default_agent_decline_keeps_the_need(tmp_path: Path) -> Non
             output_stream=prompts,
         )
     assert report.capabilities == ("frontend-ide", "node")
-    assert "antigravity-download" not in report.authorized
+    assert "antigravity-download" not in report.answered
     assert "antigravity" not in str(read_toml(project / ".devcapsule" / "devcapsule.toml"))
 
 
 def test_default_agent_is_not_offered_where_it_cannot_resolve(tmp_path: Path) -> None:
-    """Where the surface has no verified antigravity combination (PyCharm
-    before its gen2 edge), the question must not appear, and the init must
-    not fail on the default's account."""
+    """Where the default agent has no validated combination with the surface,
+    the question must not appear, and the init must not fail on the
+    default's account."""
 
     project = tmp_path / "interactive-project"
     project.mkdir()
@@ -1224,15 +1244,44 @@ def test_config_need_offers_and_accepts_the_experiment_lever(tmp_path: Path, cap
 
         assert cli.main(grow) == 2
         refusal = capsys.readouterr().err
-        assert "Not yet validated: pycharm 2026.2.0.1 on base v0.2.9." in refusal
+        assert "Not yet validated: antigravity-cli 1.1.24 on base v0.2.10." in refusal
         assert "Run it as an experiment with --unverified" in refusal
         manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
         assert manifest["capabilities"]["need"] == ["python", "python-ide"]
 
         assert cli.main([*grow, "--unverified"]) == 0
         warning = capsys.readouterr().err
-        assert "Running as an experiment. Not yet validated: pycharm 2026.2.0.1" in warning
+        assert "Running as an experiment. Not yet validated: antigravity-cli 1.1.24" in warning
         manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
         assert manifest["capabilities"]["need"] == ["antigravity-agent", "python", "python-ide"]
         lock = read_toml(project / ".devcapsule" / "devcapsule.linux-amd64.lock")
-        assert lock["unverified-combinations"] == "pycharm 2026.2.0.1 on base v0.2.9"
+        assert lock["unverified-combinations"] == "antigravity-cli 1.1.24 on base v0.2.10"
+
+
+def test_init_report_shows_recommendation_values_and_how_each_node_was_settled(
+    tmp_path: Path, capsys
+) -> None:
+    project = tmp_path / "fresh-project"
+    project.mkdir()
+    with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
+        assert (
+            cli.main(
+                [
+                    *full_init_command(project),
+                    "--authorize",
+                    "docker-daemon",
+                    "host-socket",
+                    "Peer capsules run the suite.",
+                ]
+            )
+            == 0
+        )
+        output = capsys.readouterr().out
+    # The value, not the justification, follows the equals sign.
+    assert (
+        "Recommended docker-daemon = host-socket for every checkout "
+        "(Peer capsules run the suite.)." in output
+    )
+    assert "Answered for this checkout: base-image." in output
+    assert "Project recommendations applied to this checkout: docker-daemon." in output
+    assert "Standing from the existing checkout record" not in output

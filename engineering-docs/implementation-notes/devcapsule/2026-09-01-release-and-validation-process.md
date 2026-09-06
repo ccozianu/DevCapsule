@@ -116,11 +116,11 @@ runtime PEX. The convention going forward:
   whose digest no longer matches what the tag serves. Any rebuild is a
   new tag. Trust and the matrix pin bind to the registry digest; the
   tag exists for human addressing.
-- **The substrate string stays out of the tag.** `ubuntu-24.04-genN`
-  names a compatibility generation and lives in the resolution matrix
-  (D-0007 as amended 2026-09-02); the tag names a release. The two
-  vocabularies advance independently — most new tags share the
-  incumbent substrate and inherit its verified edges.
+- **The base family stays out of the tag.** The family (`ubuntu-24.04`)
+  is the unit a validation holds for and lives in the resolution matrix
+  (D-0007 as amended 2026-09-02 and 2026-09-06); the tag names a
+  release. The two advance independently — most new tags join the
+  incumbent family and inherit its validations.
 - **Legacy tags** (`ubuntu-24.04-v019` … `-v026`) predate the
   convention and stay exactly as published; the matrix addresses them
   by mnemonic and digest like any other pin.

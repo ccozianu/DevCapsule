@@ -14,7 +14,7 @@ ad hoc at each call site.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import re
 import sys
@@ -28,7 +28,7 @@ from devcapsule.configuration_nodes import (
 )
 from devcapsule.components.antigravity_cli import DEFINITION as ANTIGRAVITY_CLI
 from devcapsule.components.catalog import INTERACTIVE_SURFACES
-from devcapsule.elicitation import AnswerKey, Elicitor
+from devcapsule.elicitation import SOURCE_EXISTING_RECORD, AnswerKey, Elicitor
 from devcapsule.environment_realization import required_local_image
 from devcapsule.materialization import validate_base_image
 from devcapsule.project import sanitize_name
@@ -74,6 +74,7 @@ def _current_matrix() -> ResolutionMatrix:
 __all__ = [
     "CheckoutRecord",
     "InitializeReport",
+    "NeedReport",
     "InitializeRequest",
     "ProvidedAnswer",
     "ResolveReport",
@@ -351,8 +352,17 @@ class InitializeReport:
     lock_path: Path
     lock_action: str
     base_display: str
-    recommendations: tuple[tuple[str, str], ...]
-    authorized: tuple[str, ...]
+    # (name, rendered value, justification) for every recommendation the
+    # manifest carries after this init.
+    recommendations: tuple[tuple[str, str, str], ...]
+    # Authorization nodes by how this invocation settled them: answered
+    # here (a flag or a prompt), carried forward from the existing checkout
+    # record because their digest still matched, or applied to the owner's
+    # checkout because the project recommends them. The report says which,
+    # so a re-run never reads as if it granted what already stood.
+    answered: tuple[str, ...]
+    carried: tuple[str, ...]
+    recommended: tuple[str, ...]
     checkout_record: Path
     resolve: ResolveReport
 
@@ -364,17 +374,81 @@ class InitializeReport:
             f"Capabilities: {' '.join(self.capabilities)}",
             f"{self.lock_action} {self.lock_path} (base {self.base_display})",
         ]
-        lines.extend(
-            f"Recommended {name} = {value} for every checkout."
-            for name, value in self.recommendations
-        )
-        if self.authorized:
-            lines.append(
-                "Authorized for this checkout: " + ", ".join(self.authorized) + "."
-            )
+        for name, value, justification in self.recommendations:
+            line = f"Recommended {name} = {value} for every checkout"
+            lines.append(f"{line} ({justification})." if justification else f"{line}.")
+        lines.extend(_authorization_lines(self.answered, self.carried, self.recommended))
         lines.append(f"Checkout record: {self.checkout_record}")
         lines.append(self.resolve.render())
         lines.append("Project initialized; 'devcapsule project run' starts it.")
+        return "\n".join(lines)
+
+
+def _authorization_lines(
+    answered: tuple[str, ...], carried: tuple[str, ...], recommended: tuple[str, ...]
+) -> list[str]:
+    lines = []
+    if answered:
+        lines.append("Answered for this checkout: " + ", ".join(answered) + ".")
+    if carried:
+        lines.append(
+            "Standing from the existing checkout record: " + ", ".join(carried) + "."
+        )
+    if recommended:
+        lines.append(
+            "Project recommendations applied to this checkout: "
+            + ", ".join(recommended)
+            + "."
+        )
+    return lines
+
+
+@dataclass(frozen=True)
+class _Authorizations:
+    """Authorization nodes settled by one elicitation, by how they were settled."""
+
+    answered: list[str] = field(default_factory=list)
+    carried: list[str] = field(default_factory=list)
+
+    def settle(self, name: str, source: str) -> None:
+        (self.carried if source == SOURCE_EXISTING_RECORD else self.answered).append(name)
+
+
+@dataclass(frozen=True)
+class NeedReport:
+    """Outcome of ``config need``: what changed in the need, and what followed."""
+
+    manifest_path: Path
+    previous_need: tuple[str, ...]
+    need: tuple[str, ...]
+    lock_path: Path
+    lock_changed: bool
+    base_display: str
+    answered: tuple[str, ...]
+    carried: tuple[str, ...]
+    recommended: tuple[str, ...]
+    checkout_record: Path
+    resolve: ResolveReport
+
+    def render(self) -> str:
+        added = tuple(name for name in self.need if name not in self.previous_need)
+        if added:
+            lines = [
+                f"Need: added {', '.join(added)} → {' '.join(self.need)} ({self.manifest_path})"
+            ]
+        else:
+            lines = [
+                "Need: unchanged — already in capabilities.need "
+                f"({' '.join(self.need)}); {self.manifest_path} not rewritten"
+            ]
+        if self.lock_changed:
+            lines.append(f"Lock: regenerated {self.lock_path} (base {self.base_display})")
+        else:
+            lines.append(f"Lock: unchanged (base {self.base_display})")
+        lines.extend(_authorization_lines(self.answered, self.carried, self.recommended))
+        lines.append(f"Checkout record: {self.checkout_record}")
+        lines.append(self.resolve.render())
+        lines.append("Ready; 'devcapsule project run' starts it.")
         return "\n".join(lines)
 
 
@@ -478,7 +552,7 @@ def initialize_project(
 
     declarations = authorization_declarations(manifest, lock)
     record = CheckoutRecord(manifest, root)
-    authorized = _elicit_acquisitions(
+    settled = _elicit_acquisitions(
         elicitor,
         declarations,
         record,
@@ -487,13 +561,12 @@ def initialize_project(
     )
     elicitor.finish()
 
-    for name, _value in recommendations:
+    for name, _justification in recommendations:
         declaration = declarations[name]
         record.authorization[name] = {
             "value": declaration.recommended_value,
             "recommendation-digest": declaration.recommendation_digest,
         }
-        authorized.append(name)
     _apply_extra_answers(request.answers, manifest, lock, record)
     record.write()
 
@@ -514,8 +587,13 @@ def initialize_project(
         lock_path=lock_path,
         lock_action=lock_action,
         base_display=base_display,
-        recommendations=tuple(recommendations),
-        authorized=tuple(authorized),
+        recommendations=tuple(
+            (name, render_authorization_value(CURATED_HOST_RECOMMENDATIONS[name][1]), justification)
+            for name, justification in recommendations
+        ),
+        answered=tuple(settled.answered),
+        carried=tuple(settled.carried),
+        recommended=tuple(name for name, _justification in recommendations),
         checkout_record=record.input_path,
         resolve=resolve_report,
     )
@@ -760,7 +838,7 @@ def _elicit_acquisitions(
     *,
     platform: str,
     less_pedantic: bool = False,
-) -> list[str]:
+) -> _Authorizations:
     """Elicit the owner's own executable and vendor-terms authorizations.
 
     These have no safe omission — executing an artifact and accepting vendor
@@ -776,11 +854,11 @@ def _elicit_acquisitions(
     records the selection without the solicitation.
     """
 
-    authorized: list[str] = []
+    settled = _Authorizations()
     base = declarations.get("base-image")
     if base is None:
         # A legacy image-reference lock has no formation base to authorize.
-        return _elicit_component_acquisitions(elicitor, declarations, record, authorized)
+        return _elicit_component_acquisitions(elicitor, declarations, record, settled)
     reference = str(base.recommended_value)
     existing_base = record.authorization.get("base-image")
     fresh = (
@@ -816,22 +894,22 @@ def _elicit_acquisitions(
                 platform=platform,
                 less_pedantic=less_pedantic,
             )
-            authorized.append("base-image")
-            return _elicit_component_acquisitions(elicitor, declarations, record, authorized)
+            settled.settle("base-image", answer.source)
+            return _elicit_component_acquisitions(elicitor, declarations, record, settled)
         record.authorization["base-image"] = {
             "reference": reference,
             "lock-digest": base.recommendation_digest,
         }
-        authorized.append("base-image")
-    return _elicit_component_acquisitions(elicitor, declarations, record, authorized)
+        settled.settle("base-image", answer.source)
+    return _elicit_component_acquisitions(elicitor, declarations, record, settled)
 
 
 def _elicit_component_acquisitions(
     elicitor: Elicitor,
     declarations: Mapping[str, Any],
     record: CheckoutRecord,
-    authorized: list[str],
-) -> list[str]:
+    settled: _Authorizations,
+) -> _Authorizations:
     """Ask every component acquisition the lock's formation requires.
 
     The declarations derive from the locked components' vendor contracts
@@ -869,8 +947,8 @@ def _elicit_component_acquisitions(
             "value": True,
             "recommendation-digest": declaration.recommendation_digest,
         }
-        authorized.append(declaration.name)
-    return authorized
+        settled.settle(declaration.name, answer.source)
+    return settled
 
 
 def _acquisition_validator(name: str, accepted_value: str) -> Any:
@@ -1062,7 +1140,7 @@ def add_capability_need(
     answers: tuple[ProvidedAnswer, ...] = (),
     *,
     allow_unverified: bool = False,
-) -> InitializeReport:
+) -> NeedReport:
     """Grow the project's capability need; everything downstream re-derives.
 
     The manifest gains the new names in its authored ``need`` line (a
@@ -1092,13 +1170,30 @@ def add_capability_need(
         # same one init offers, so the refusal's remedy is reachable here.
         matrix.resolve(requested, allow_unverified=allow_unverified)
         _rewrite_manifest_need(manifest_path, requested)
-    return initialize_project(
+    lock_path = resolved_root / ".devcapsule" / f"devcapsule.{Platform.current()}.lock"
+    lock_before = lock_path.read_bytes() if lock_path.is_file() else None
+    report = initialize_project(
         InitializeRequest(
             directory=resolved_root,
             answers=answers,
             regenerate=True,
             allow_unverified=allow_unverified,
         )
+    )
+    # The init report describes an initialization; this verb changed a need,
+    # and its report says exactly what that did and did not change.
+    return NeedReport(
+        manifest_path=manifest_path,
+        previous_need=current,
+        need=requested,
+        lock_path=report.lock_path,
+        lock_changed=report.lock_path.read_bytes() != lock_before,
+        base_display=report.base_display,
+        answered=report.answered,
+        carried=report.carried,
+        recommended=report.recommended,
+        checkout_record=report.checkout_record,
+        resolve=report.resolve,
     )
 
 
@@ -1178,7 +1273,7 @@ def _apply_answers_to_standing_checkout(
         if answer.family == "authorize"
     }
     elicitor = Elicitor(authorize_answers, interactive=False)
-    authorized = _elicit_acquisitions(
+    settled = _elicit_acquisitions(
         elicitor,
         declarations,
         record,
@@ -1212,7 +1307,9 @@ def _apply_answers_to_standing_checkout(
         lock_action="Kept",
         base_display=base_display,
         recommendations=(),
-        authorized=tuple(authorized),
+        answered=tuple(settled.answered),
+        carried=tuple(settled.carried),
+        recommended=(),
         checkout_record=record.input_path,
         resolve=resolve_report,
     )
