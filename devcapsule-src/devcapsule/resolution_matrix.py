@@ -59,7 +59,7 @@ class ResolutionError(ProjectConfigurationError):
     """
 
 
-_MATRIX_VERSION = "embedded-16"
+_MATRIX_VERSION = "embedded-17"
 
 
 # --------------------------------------------------------------------------
@@ -467,9 +467,9 @@ _V0_2_8_BASE = _BasePin(
 # The v0.2.9 base is a rebuild in the same family (recipe version 5, same
 # toolchain) embedding the 0.2.9 runtime, so it inherits the family's
 # validations. Pushed by the owner 2026-09-02; digest read from the
-# registry at pinning time. The 0.2.9 release is to be withdrawn once
-# 0.2.10 is pushed and validated (owner decision 2026-09-06); the pin
-# moves to the v0.2.10 base when that is pushed, before the tag.
+# registry at pinning time. Superseded by v0.2.10 below; the 0.2.9
+# release is withdrawn once 0.2.10 is validated (owner decision
+# 2026-09-06), and this pin retires with it.
 _V0_2_9_BASE = _BasePin(
     mnemonic="v0.2.9",
     base_family=_BASE_FAMILY_UBUNTU_24_04,
@@ -480,6 +480,26 @@ _V0_2_9_BASE = _BasePin(
             "@sha256:ca9f79619fc0709a13e6a66de8959cda55dd47c23ec073fe0eb353de32734232"
         ),
         "build-mnemonic": "v0.2.9",
+    },
+)
+
+# The v0.2.10 base (recipe version 6: no boot contract in the base, the
+# formation recipe sets its own) embeds the 0.2.10 runtime built from the
+# published revision bd8283b; same family, same toolchain, so it inherits
+# every validation. Built with host networking and pushed 2026-09-06
+# 13:50 UTC; digest read from the registry after the push. Its evidence
+# is the owner's 2026-09-06 trading-research smoke on the locally built
+# twin (identical recipe and packages; only the embedded PEX differs).
+_V0_2_10_BASE = _BasePin(
+    mnemonic="v0.2.10",
+    base_family=_BASE_FAMILY_UBUNTU_24_04,
+    satisfies=frozenset({"python", "docker-cli", "node", "java", "maven"}),
+    lock_table={
+        "reference": (
+            "docker.io/mycodespaceai/devcapsule-base"
+            "@sha256:76a07cb9e72158f810b32598eb05f9a375f8e4748b80b6eac04c403798d39a45"
+        ),
+        "build-mnemonic": "v0.2.10",
     },
 )
 
@@ -743,7 +763,7 @@ _POSTGRESQL_CLIENT_16 = _ComponentPin(
 _LINUX_AMD64_MATRIX = ResolutionMatrix(
     platform=Platform.LINUX_AMD64,
     matrix_version=_MATRIX_VERSION,
-    bases=(_V0_2_8_BASE, _V0_2_9_BASE),
+    bases=(_V0_2_8_BASE, _V0_2_9_BASE, _V0_2_10_BASE),
     components={
         "pycharm": (_PYCHARM_2026_2_0_1,),
         "codium": (_CODIUM_1_126_04524,),

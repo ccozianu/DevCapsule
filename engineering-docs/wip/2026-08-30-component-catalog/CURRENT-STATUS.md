@@ -301,7 +301,28 @@ dependency cycle: land content → bump to 0.2.10 → build the PEX → build
 and push the base as `v0.2.10` → repin (matrix bump, sample and dogfood
 locks regenerated) → sample smokes → dogfood smoke → tag → withdraw
 0.2.9. A release-candidate concept to make that walk routine went to
-`project-management` as intake 2026-09-06. The original v0.2.9 gate list follows for the record;
+`project-management` as intake 2026-09-06.
+
+**Walk status, 2026-09-06 afternoon.** The owner smoked trading-research
+on the locally built 0.2.10 base and the local PEX ("worked nicely").
+Then, from inside the dogfood capsule: a strict PEX was built from the
+pushed revision `bd8283b` in a clean worktree (source verification:
+public GitHub commit reachable); the base was built from it with recipe
+6 and pushed as `docker.io/mycodespaceai/devcapsule-base:v0.2.10`,
+registry digest `sha256:76a07cb9e72158f810b32598eb05f9a375f8e4748b80b6eac04c403798d39a45`
+(13:50 UTC; the owner approved the push after seeing the image's
+labels). The build needed `--network host`: the daemon's bridge network
+hands containers nameservers on 100.100.x that they cannot reach, so
+`apt-get update` fails under the default build network on this host —
+an environment fact, not a recipe defect. The matrix pins v0.2.10 as
+the newest base in the family (`embedded-17`); golden locks, both
+sample locks (committed and pushed on each sample's
+`three-provider-formation` branch), and the dogfood lock are on it, and
+the dogfood manifest now needs `antigravity-agent` — the three-agent
+configuration. Remaining: the owner's smoke of tictactoe and of the
+dogfood project on the pushed base, the two PRs (workstream branch,
+outbox), the `v0.2.10` tag, then the 0.2.9 withdrawal and the v0.2.9
+pin's retirement. The original v0.2.9 gate list follows for the record;
 its open items carry over.
 
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
