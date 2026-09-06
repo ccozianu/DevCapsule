@@ -285,7 +285,24 @@ checkout (codium × codex 0.153.0 on v0.2.9): build clean, launcher on
 PATH, all helpers present, known-good generation `20260905T135119Z`
 recorded.
 
-## Release Target: v0.2.9
+## Release Target: v0.2.10 (0.2.9 withdrawn 2026-09-06)
+
+**Superseded 2026-09-06.** v0.2.9 was tagged and published on 2026-09-05
+(PEX on GitHub Releases, base on Docker Hub) with Codex effectively
+broken — the single-binary extraction fixed the same day, after the tag
+(PR #56). The owner withdraws 0.2.9 from GitHub and Docker Hub; the
+target is **v0.2.10**, with a provision: everything is validated first
+on the two sample projects — trading-research (PyCharm × three agents)
+and tictactoe (Codium × three agents) — and only then is the dogfood
+project migrated to the three-agent configuration. Because the v0.2.9
+base digests go with the withdrawal, the matrix pin moves to a new base
+built from the 0.2.10 revision, walking the release note's dependency
+cycle: land content → bump to 0.2.10 → build the PEX → build and push
+the base as `v0.2.10` → repin (matrix bump, sample and dogfood locks
+regenerated) → sample smokes → dogfood smoke → tag. A release-candidate
+concept to make that walk routine went to `project-management` as
+intake 2026-09-06. The original v0.2.9 gate list follows for the record;
+its open items carry over.
 
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
 
