@@ -582,6 +582,13 @@ its ruling thread open):
   sole remedy. The owner's principle: init operates on the source tree's
   `.devcapsule`, and updates the local run configuration only as a
   convenience; `config` owns the local half. Sent as intake 2026-09-06.
+  Fixed the same day without waiting for the ruling (`eb395fa`): the
+  report's value/justification swap (the intake's point 4), and
+  `config need` now prints its own report — need changed or unchanged,
+  lock regenerated or byte-identical, and every authorization node by
+  how it was settled (answered, standing from the record, or applied as
+  a project recommendation) — instead of init's "Project initialized".
+  The layering itself is untouched and stays with the two items.
 - **Refusal UX and the matrix's vocabulary** (ruled 2026-09-06): the
   owner took stock of every refusal, its grounds, and its audience
   (recorded as the first entry of the new `engineering-docs/blog/`) and
