@@ -435,6 +435,40 @@ entry is safe to restore by hand-copy. A guided `config history`/
 
 ## Next Resumable Task
 
+**Paused 2026-09-06 (afternoon), everything committed and pushed;
+working tree clean.** Branch `component-catalog/antigravity-cli` at
+`b941258` (PR #57 merged the morning's work; the afternoon's commits
+`18b2938`…`b941258` await the next PR). Outbox at `ba4c2bf` with the
+blog and five intake items, awaiting its PR. The state to re-verify on
+resume, in order:
+
+1. **Owner actions outstanding** (nothing for the agent until they
+   land): smoke tictactoe and the dogfood project on the pushed
+   v0.2.10 base (`docker.io/mycodespaceai/devcapsule-base:v0.2.10`,
+   digest `sha256:76a07cb9…d39a45`; clients in `devcapsule-src/dist/`:
+   `devcapsule-0.2.10-bd8283b.pex` strict, `devcapsule-local.pex`
+   local); merge the workstream PR and the outbox PR; tag `v0.2.10`;
+   withdraw 0.2.9 from GitHub and Docker Hub.
+2. **Agent follow-ups, gated on those**: retire the `v0.2.9` pin from
+   the matrix once 0.2.9 is withdrawn (explicit retirement, D-0007);
+   convert the provisional entries the smokes evidence (PyCharm,
+   claude-code 2.1.236/2.1.261, codex 0.153.0/0.153.4) and close the
+   codex bug record and the formation-identity record's entrypoint
+   half on the "reused canonical environment" second run.
+3. **Open Threads** below carry the rest; the ones the owner is most
+   likely to pick up next: the `config need` layering ruling (point
+   (a)), the `use_legacy_landlock` deprecation at the next codex
+   advance, and `resolve`/`run` not yet reading
+   `unverified-combinations` back to a collaborator.
+
+Deliberately not preserved: the scratch checkouts
+`/home/devcapsule/codium-smoke-tictactoe` and
+`/home/devcapsule/codex-seed-smoke` (host-backed, reusable but
+disposable), the smoke formations they built, and the session's
+scratchpad. Environment fact worth remembering: base builds from this
+capsule need `images build --network host`; the daemon's bridge network
+cannot resolve DNS here.
+
 Session paused 2026-09-03, everything committed and pushed. The
 2026-09-02 pause state below is superseded by the day's entries above
 it; the standing owner actions at this pause: open the integration PR
