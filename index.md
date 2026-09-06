@@ -95,6 +95,11 @@ status file; internal WIP/archive documents use the local index in that status.
 - [Legacy-compatible PyCharm bootstrap template copy](devcapsule-src/devcapsule/assets/docker4pycharm/image-assets/vibe-coding-process.md)
 - [TypeScript five-in-a-row sample project](devcapsule-src/tests/resources/sample_projects/typescript_tictactoe_5inrow/README.md)
 
+## Development Blog
+
+- [The DevCapsule development blog](engineering-docs/blog/README.md)
+- [When should a tool refuse? Taking stock of DevCapsule's refusal UX](engineering-docs/blog/2026-09-06-when-should-a-tool-refuse.md)
+
 ## Product And Positioning
 
 - [Product documentation map](docs/README.md)
