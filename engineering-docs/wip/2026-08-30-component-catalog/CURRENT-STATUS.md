@@ -325,6 +325,31 @@ outbox), the `v0.2.10` tag, then the 0.2.9 withdrawal and the v0.2.9
 pin's retirement. The original v0.2.9 gate list follows for the record;
 its open items carry over.
 
+**Walk status, 2026-09-06 evening.** The owner merged the workstream PR
+(#59) and the outbox PR (#60), tagged `v0.2.10` at `2415029` (the #60
+merge), and published the release (PEX sha256 `1b1be350…56be6b`). The
+dogfood project then ran on the first v0.2.10 push with all three
+agents — this workstream's resume session on 2026-09-06 evening ran
+inside it (antigravity 1.1.24, codex 0.153.4, claude-code 2.1.261 all
+on PATH; suite 552 green and mypy clean from inside). The owner then
+rebuilt the base from the *released* PEX (`--source-revision 2415029`,
+which the CLI checks against the PEX's embedded build record and
+verifies as a public commit; it never checks source out) and pushed
+it over the `v0.2.10` tag at 22:48 UTC, digest
+`sha256:4bb691b556a2cb9acffa4c0adddd9ada66864ee3c81f4f00ca35e9df9056bf9c`,
+because the first push embedded a pre-tag PEX from `bd8283b` (before
+the matrix's own v0.2.10 pin). The agent repinned at the owner's
+direction: matrix `embedded-18` carries the new digest; golden locks,
+the dogfood lock, and both sample locks regenerated (samples pushed on
+`three-provider-formation`: tictactoe `f1e2e6f`, trading-research
+`687d245`). Consequence to know: the lock committed at the tag pins the
+first push's digest, which stays pullable by digest on Docker Hub but
+is no longer what the tag names; the release-candidate intake sent to
+`project-management` describes the walk that would avoid this.
+Remaining: the owner's smoke on the rebuilt base (a lock change means
+the checkout's base-image authorization re-asks), the PR for this
+repin, the 0.2.9 withdrawal, and the v0.2.9 pin's retirement.
+
 Set by the product owner on 2026-09-02. v0.2.9 ships when:
 
 1. ~~The Antigravity CLI component is implemented and owner-smoked, per
@@ -435,20 +460,18 @@ entry is safe to restore by hand-copy. A guided `config history`/
 
 ## Next Resumable Task
 
-**Paused 2026-09-06 (afternoon), everything committed and pushed;
-working tree clean.** Branch `component-catalog/antigravity-cli` at
-`b941258` (PR #57 merged the morning's work; the afternoon's commits
-`18b2938`…`b941258` await the next PR). Outbox at `ba4c2bf` with the
-blog and five intake items, awaiting its PR. The state to re-verify on
-resume, in order:
+**Resumed 2026-09-06 evening inside the dogfood capsule on v0.2.10;
+the repin to the rebuilt base is committed and pushed, working tree
+clean.** The tag, the release, PR #59 and PR #60 are done (see *Walk
+status, 2026-09-06 evening*); the afternoon's pause list below is
+updated in place. The state to re-verify on resume, in order:
 
 1. **Owner actions outstanding** (nothing for the agent until they
-   land): smoke tictactoe and the dogfood project on the pushed
-   v0.2.10 base (`docker.io/mycodespaceai/devcapsule-base:v0.2.10`,
-   digest `sha256:76a07cb9…d39a45`; clients in `devcapsule-src/dist/`:
-   `devcapsule-0.2.10-bd8283b.pex` strict, `devcapsule-local.pex`
-   local); merge the workstream PR and the outbox PR; tag `v0.2.10`;
-   withdraw 0.2.9 from GitHub and Docker Hub.
+   land): smoke the rebuilt v0.2.10 base
+   (`docker.io/mycodespaceai/devcapsule-base:v0.2.10`, digest
+   `sha256:4bb691b5…56bf9c`, built from the released PEX) on the
+   dogfood project and, if desired, tictactoe; merge the repin PR from
+   this branch; withdraw 0.2.9 from GitHub and Docker Hub.
 2. **Agent follow-ups, gated on those**: retire the `v0.2.9` pin from
    the matrix once 0.2.9 is withdrawn (explicit retirement, D-0007);
    convert the provisional entries the smokes evidence (PyCharm,

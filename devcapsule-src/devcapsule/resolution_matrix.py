@@ -59,7 +59,7 @@ class ResolutionError(ProjectConfigurationError):
     """
 
 
-_MATRIX_VERSION = "embedded-17"
+_MATRIX_VERSION = "embedded-18"
 
 
 # --------------------------------------------------------------------------
@@ -484,12 +484,15 @@ _V0_2_9_BASE = _BasePin(
 )
 
 # The v0.2.10 base (recipe version 6: no boot contract in the base, the
-# formation recipe sets its own) embeds the 0.2.10 runtime built from the
-# published revision bd8283b; same family, same toolchain, so it inherits
-# every validation. Built with host networking and pushed 2026-09-06
-# 13:50 UTC; digest read from the registry after the push. Its evidence
-# is the owner's 2026-09-06 trading-research smoke on the locally built
-# twin (identical recipe and packages; only the embedded PEX differs).
+# formation recipe sets its own) embeds the released 0.2.10 PEX, built
+# from the tag revision 2415029; same family, same toolchain, so it
+# inherits every validation. A first push (13:50 UTC, digest
+# 76a07cb9…d39a45) carried a pre-tag PEX from bd8283b and was replaced
+# by the owner's rebuild from the released PEX, pushed 2026-09-06
+# 22:48 UTC; the digest below was read from the registry after that
+# push. Its evidence is the owner's 2026-09-06 trading-research smoke
+# on the locally built twin and the same day's dogfood run (this
+# repository's three-agent formation on the first push).
 _V0_2_10_BASE = _BasePin(
     mnemonic="v0.2.10",
     base_family=_BASE_FAMILY_UBUNTU_24_04,
@@ -497,7 +500,7 @@ _V0_2_10_BASE = _BasePin(
     lock_table={
         "reference": (
             "docker.io/mycodespaceai/devcapsule-base"
-            "@sha256:76a07cb9e72158f810b32598eb05f9a375f8e4748b80b6eac04c403798d39a45"
+            "@sha256:4bb691b556a2cb9acffa4c0adddd9ada66864ee3c81f4f00ca35e9df9056bf9c"
         ),
         "build-mnemonic": "v0.2.10",
     },
