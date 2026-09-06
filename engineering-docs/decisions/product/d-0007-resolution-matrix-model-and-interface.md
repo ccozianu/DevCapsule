@@ -265,3 +265,25 @@ did not explain itself.
   whom — component, version, base, evidence status — not the model's
   words; the house style is with `project-management` (intake
   2026-09-06).
+
+## Amendment 2026-09-06 (third): The v0.2.9 Pin Retired With Its Release
+
+Decided by the product owner: the 0.2.9 release — the PEX on GitHub
+Releases and the `v0.2.9` base tag on Docker Hub — was withdrawn on
+2026-09-06, after v0.2.10 had been pushed, run on the trading-research
+sample and the dogfood project, and tagged. 0.2.9 shipped codex as a
+single plucked binary; the fix landed the same day, after the tag.
+
+- **Retirement.** The v0.2.9 base pin
+  (`docker.io/mycodespaceai/devcapsule-base@sha256:ca9f7961…734232`) is
+  retired from the matrix, explicitly, per decision point 1. Retiring a
+  base release in a family removes no validation: the family's edges
+  stand, and evidence strings that name the v0.2.9 image keep naming it,
+  since they record where a smoke ran, not what is selectable.
+- **No matrix-version advance.** Nothing selected v0.2.9 once v0.2.10
+  was pinned, so no generated formation changes; `embedded-18` stands.
+- **Standing locks.** A lock that pins the v0.2.9 digest remains valid
+  per `R-COMPAT-001`. The manifest is still served by digest after the
+  tag's removal, but that is registry retention, not a guarantee; such
+  a checkout should regenerate.
+
