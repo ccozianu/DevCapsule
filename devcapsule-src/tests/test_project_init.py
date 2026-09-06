@@ -20,7 +20,42 @@ from devcapsule.project_operations import (
 )
 from devcapsule.project_configuration import ProjectConfigurationError
 from devcapsule.platforms import Platform
-from devcapsule.resolution_matrix import MATRICES
+from devcapsule.resolution_matrix import MATRICES, ResolutionMatrix
+
+
+def matrix_without_pycharm_on_gen2() -> ResolutionMatrix:
+    """The embedded matrix as it stood before PyCharm's gen2 edge (2026-09-05).
+
+    Tests of behaviour that needs a need with *no* fully verified base —
+    PyCharm plus antigravity, which is verified only on gen2 — rebuild that
+    state from the real pins rather than freezing a copy of them.
+    """
+
+    real = MATRICES[Platform.LINUX_AMD64]
+    return ResolutionMatrix(
+        platform=real._platform,
+        matrix_version=real._matrix_version,
+        bases=real._bases,
+        components=real._components,
+        edges=tuple(
+            edge
+            for edge in real._verified.values()
+            if not (edge.component_id == "pycharm" and edge.substrate.endswith("gen2"))
+        ),
+        couplings=real._couplings,
+        surface_capabilities=real._surface_capabilities,
+        ancillary_capabilities=real._ancillary_capabilities,
+        materialization=real._materialization,
+    )
+
+
+def sparse_matrix():
+    """Patch the matrix project operations consult to the reduced one."""
+
+    return patch(
+        "devcapsule.project_operations.MATRICES",
+        {Platform.LINUX_AMD64: matrix_without_pycharm_on_gen2()},
+    )
 
 
 def isolated_env(tmp_path: Path) -> dict[str, str]:
@@ -556,9 +591,10 @@ def test_interactive_init_prompts_in_the_settled_order(tmp_path: Path) -> None:
     project = tmp_path / "interactive-project"
     project.mkdir()
     prompts = io.StringIO()
-    # creator; need; four recommendations (Enter = none); base (Enter = yes).
+    # creator; need; default agent (no); four recommendations (Enter = none);
+    # base (Enter = yes).
     answers = io.StringIO(
-        "https://github.com/example\npython python-ide\n\n\n\n\n\n"
+        "https://github.com/example\npython python-ide\nno\n\n\n\n\n\n"
     )
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
         report = initialize_project(
@@ -569,6 +605,7 @@ def test_interactive_init_prompts_in_the_settled_order(tmp_path: Path) -> None:
     transcript = prompts.getvalue()
     assert "Project creator" in transcript
     assert "Capabilities the project needs" in transcript
+    assert "default agent component (antigravity-agent)" in transcript
     assert "[none]" in transcript
     assert "[default]" in transcript
     manifest = read_toml(project / ".devcapsule" / "devcapsule.toml")
@@ -679,8 +716,9 @@ def test_init_base_selection_solicits_informed_consent_interactively(
     selection = "mycodespaceai/devcapsule-base:v0.2.9-test"
     identity = f"sha256:{'d' * 64}"
     prompts = io.StringIO()
-    # creator; need; four recommendations (Enter = none); consent (Enter = yes).
-    answers = io.StringIO("https://github.com/example\npython-ide\n\n\n\n\n\n")
+    # creator; need; default agent (no); four recommendations (Enter = none);
+    # consent (Enter = yes).
+    answers = io.StringIO("https://github.com/example\npython-ide\nno\n\n\n\n\n\n")
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
         with patch(
             "devcapsule.project_operations.required_local_image",
@@ -714,7 +752,7 @@ def test_init_base_selection_consent_can_be_declined(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
     selection = "mycodespaceai/devcapsule-base:v0.2.9-test"
-    answers = io.StringIO("https://github.com/example\npython-ide\n\n\n\n\nno\n")
+    answers = io.StringIO("https://github.com/example\npython-ide\nno\n\n\n\n\nno\n")
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
         with patch(
             "devcapsule.project_operations.required_local_image",
@@ -875,9 +913,10 @@ def test_init_unverified_resolves_past_the_matrix_with_a_gentle_warning(
         "antigravity-download",
         "true",
     ]
-    with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
-        # PyCharm is verified only on gen1, antigravity only on gen2: no
-        # fully verified base exists, and the strict form refuses.
+    with patch.dict(os.environ, isolated_env(tmp_path), clear=False), sparse_matrix():
+        # In the matrix as it stood before 2026-09-05, PyCharm was verified
+        # only on gen1 and antigravity only on gen2: no fully verified base
+        # exists, and the strict form refuses.
         assert cli.main(need) == 2
         assert "No verified combination" in capsys.readouterr().err
 
@@ -924,7 +963,7 @@ def test_init_refuses_a_published_non_recommended_digest(tmp_path: Path, capsys)
 def test_interactive_decline_of_the_base_is_a_clean_failure(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
-    answers = io.StringIO("https://github.com/example\npython-ide\n\n\n\n\nno\n")
+    answers = io.StringIO("https://github.com/example\npython-ide\nno\n\n\n\n\nno\n")
     with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
         with pytest.raises(ProjectConfigurationError, match="declined"):
             initialize_project(
@@ -1074,14 +1113,15 @@ def test_interactive_default_agent_decline_keeps_the_need(tmp_path: Path) -> Non
 
 
 def test_default_agent_is_not_offered_where_it_cannot_resolve(tmp_path: Path) -> None:
-    """python-ide has no verified antigravity combination yet: the question
-    must not appear, and the init must not fail on the default's account."""
+    """Where the surface has no verified antigravity combination (PyCharm
+    before its gen2 edge), the question must not appear, and the init must
+    not fail on the default's account."""
 
     project = tmp_path / "interactive-project"
     project.mkdir()
     prompts = io.StringIO()
     answers = io.StringIO("https://github.com/example\npython python-ide\n\n\n\n\n\n")
-    with patch.dict(os.environ, isolated_env(tmp_path), clear=False):
+    with patch.dict(os.environ, isolated_env(tmp_path), clear=False), sparse_matrix():
         report = initialize_project(
             InitializeRequest(directory=project, interactive=True),
             input_stream=answers,

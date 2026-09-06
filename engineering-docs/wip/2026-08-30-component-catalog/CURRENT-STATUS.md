@@ -561,14 +561,23 @@ its ruling thread open):
   next smoke of a codex-carrying formation on a fresh slot is the
   evidence, and `use_legacy_landlock`'s deprecation means the sandboxed
   fallback needs re-checking at the next codex advance.
-- **Base rebuild** (updated 2026-09-03): the codex and claude-code gen2
+- **Base rebuild** (updated 2026-09-05): the codex and claude-code gen2
   edges entered provisionally (matrix `embedded-8`) when the owner's
   five-way formation — codium × antigravity × claude-code × codex —
-  could not resolve without them; the owner's smoke of that formation
-  on v0.2.9 is their pending evidence. Once it passes, every
-  codium-composition resolves to v0.2.9 with no runtime-PEX override;
-  only PyCharm compositions remain on v026 pending their own gen2
-  smoke (see the PyCharm slot-path migration thread).
+  could not resolve without them; the owner's 2026-09-03 smoke of that
+  formation on v0.2.9 converted them. PyCharm's gen2 edge entered
+  provisionally on 2026-09-05 (matrix `embedded-15`) on the evidence
+  of the owner's dogfood day: the repository's own formation (pycharm
+  × claude-code × codex) ran all day on the owner's local v0.2.9
+  rebuild with this workstream developing inside it. It surfaced when
+  the trading-research sample's `init --regenerate` refused pycharm ×
+  antigravity for want of a shared base — the owner's
+  `--authorize base-image` selection could not help because init
+  resolves the lock before it reads the base answer (the
+  base-as-config-node thread). Every current composition now resolves
+  to v0.2.9 strictly; v026 is no longer selected by any need. A
+  recorded formation run naming the pinned registry digest converts
+  the PyCharm edge from provisional.
 - **PyCharm slot-path migration** (recorded follow-up): PyCharm still
   travels the launcher's named state fields; every other surface uses the
   generic plan-slot mounts. Migrating PyCharm onto the generic path (and

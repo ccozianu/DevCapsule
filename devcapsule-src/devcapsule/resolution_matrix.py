@@ -59,7 +59,7 @@ class ResolutionError(ProjectConfigurationError):
     """
 
 
-_MATRIX_VERSION = "embedded-14"
+_MATRIX_VERSION = "embedded-15"
 
 
 # --------------------------------------------------------------------------
@@ -784,6 +784,20 @@ _LINUX_AMD64_MATRIX = ResolutionMatrix(
     },
     edges=(
         _VerifiedEdge("pycharm", "2026.2.0.1", _SUBSTRATE_GEN1, _DOGFOOD_E2E),
+        # The owner's 2026-09-05 dogfood day: the repository's own
+        # formation (pycharm x claude-code x codex) ran all day on the
+        # owner's v0.2.9 rebuild — a gen2 base by substrate, though a local
+        # image ID rather than the pinned registry digest — with this
+        # workstream developing inside it. Provisional until a recorded
+        # formation run names a pinned gen2 base; it lets every PyCharm
+        # composition resolve to v0.2.9 without --unverified.
+        _VerifiedEdge(
+            "pycharm",
+            "2026.2.0.1",
+            _SUBSTRATE_GEN2,
+            "provisional: owner's 2026-09-05 dogfood session on the local "
+            "v0.2.9 rebuild (formation e52aa7f4934b232e7972)",
+        ),
         _VerifiedEdge(
             "codium",
             "1.126.04524",
