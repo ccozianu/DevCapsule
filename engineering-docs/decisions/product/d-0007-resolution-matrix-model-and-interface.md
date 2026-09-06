@@ -193,3 +193,43 @@ toolchain package could break a component without touching the substrate
 string. The release E2E ladder covers that class; if it recurs in
 practice, the substrate granularity is the thing to revisit. Evidence
 strings on edges keep naming the concrete base that was smoked.
+
+## Amendment 2026-09-06: A Missing Validation Is Disclosed, Not Refused
+
+Decided by the product owner after a refusal met while regenerating the
+trading-research sample's lock (PyCharm validated only on gen1,
+Antigravity only on gen2) surfaced two things: the model's vocabulary
+(*verified edge*, *substrate*) had leaked into every adopter-facing
+surface, and a gap in the matrix's knowledge was being delivered in the
+voice of a refusal on grounds.
+
+**Grounds for refusal.** Resolution refuses outright in exactly one case:
+no base ships a toolchain the need requires. That is a fact about the
+world and `--unverified` cannot help; the message says so. Every other
+gap — a component version or a coupling the matrix has not validated on
+the selected base — is a fact about the matrix's knowledge. It is
+disclosed, not refused: the message names the exact elements the
+experiment would run (component, version, base) and offers to run it as
+an experiment with `--unverified`. The lever is accepted wherever
+resolution happens (`init`, `config need`).
+
+**The lock discloses the same.** A lock generated as an experiment says
+so in its header and in `unverified-combinations`, in the same words, so
+the owner or contributor who publishes it and the collaborator who
+clones it read the same fact. For now both are warned identically; the
+tool cannot yet tell a private checkout lock from one about to be
+committed, and gating belongs where the matrix is updated (below).
+
+**The vocabulary boundary.** *Verified edges*, *couplings*,
+*provenance*, and *substrates* are this record's words and the code's.
+Adopter-facing text — refusals, warnings, lock headers, README — says
+*validated* / *not yet validated*, names components, versions, and
+bases, and never names the grouping.
+
+**Handed to `project-management` (intake 2026-09-06):** designing how
+the matrix learns from user experience — an adopter's successful
+experiment becoming a validated combination — and, later, gating a
+matrix change on mainline on the existence of a claim that every added
+combination has run successfully. Until then, matrix entries advance at
+the owner's direction with their evidence string, provisional entries
+included.

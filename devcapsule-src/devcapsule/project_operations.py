@@ -461,12 +461,14 @@ def initialize_project(
             list(identity.capabilities), allow_unverified=request.allow_unverified
         )
         if generated.unverified:
+            # The owner's 2026-09-06 ruling: name the elements, call it what
+            # it is — an experiment — and say that the lock carries the fact
+            # to everyone who uses it.
             print(
-                "Warning: the resolution matrix has no verification for:\n"
-                + "".join(f"  {item}\n" for item in generated.unverified)
-                + "Proceeding at your request; the generated lock records these "
-                "combinations. If they work, they are candidates for verified "
-                "edges in the matrix.",
+                "Running as an experiment. Not yet validated: "
+                + "; ".join(generated.unverified)
+                + ".\nThe lock records this for everyone who uses it; if it works, "
+                "let the DevCapsule maintainers know so the matrix can learn.",
                 file=sys.stderr,
             )
         # World-readable like any committed project file; the 0600 default is
@@ -1058,6 +1060,8 @@ def add_capability_need(
     root: Path,
     names: Sequence[str],
     answers: tuple[ProvidedAnswer, ...] = (),
+    *,
+    allow_unverified: bool = False,
 ) -> InitializeReport:
     """Grow the project's capability need; everything downstream re-derives.
 
@@ -1084,11 +1088,17 @@ def add_capability_need(
     if requested != current:
         # Pre-flight the grown need before touching authored content: an
         # unresolvable set (a second surface, no verified combination) must
-        # leave the manifest exactly as it was.
-        matrix.resolve(requested)
+        # leave the manifest exactly as it was. The experiment lever is the
+        # same one init offers, so the refusal's remedy is reachable here.
+        matrix.resolve(requested, allow_unverified=allow_unverified)
         _rewrite_manifest_need(manifest_path, requested)
     return initialize_project(
-        InitializeRequest(directory=resolved_root, answers=answers, regenerate=True)
+        InitializeRequest(
+            directory=resolved_root,
+            answers=answers,
+            regenerate=True,
+            allow_unverified=allow_unverified,
+        )
     )
 
 
