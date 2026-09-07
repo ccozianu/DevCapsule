@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: open; first session started 2026-08-30
+State: paused 2026-09-07 by the product owner after the 0.2.10 walk; resume from *Next Resumable Task*
 
 Integration target: `main`
 
@@ -490,6 +490,32 @@ entry is safe to restore by hand-copy. A guided `config history`/
 `restore` command surface is recorded follow-on work in the decision.
 
 ## Next Resumable Task
+
+**Paused 2026-09-07 by the product owner; everything committed, PR #61
+(repin, v0.2.9 pin retirement, sync-thread record) and the outbox
+(intake `one-devcapsule-inside-and-outside`) merged to `main`; working
+tree clean.** The 0.2.10 walk is complete: release tagged and
+published, base rebuilt from the released PEX, 0.2.9 withdrawn and its
+pin retired. On resume, in this order:
+
+1. **Re-verify external state**: `main` is at or past the #61 merge
+   (`1fb34c2`); Docker Hub serves `v0.2.10` at digest `4bb691b5…56bf9c`
+   and no `v0.2.9` tag; the git tag `v0.2.9` (`f2c6818`) exists unless
+   the owner deleted it.
+2. **Ask the owner** whether the smoke of the rebuilt v0.2.10 base ran
+   (dogfood, tictactoe); it is the evidence for converting the
+   provisional entries in item 2 of the earlier list below.
+3. **Version on `main`**: `main` still says 0.2.10 after the tag, so a
+   PEX built from it would be mislabeled; the bump to the next version
+   is the owner's call and has not been made.
+4. **Project-management intake awaiting disposition** (sent by this
+   workstream, not this workstream's to act on): the release-candidate
+   concept, internal naming, and the inside-versus-outside sync
+   decision, whose outcome decides whether the matrix keeps pinning
+   base digests at all. Do not start any of the three shapes here
+   without that disposition.
+
+The 2026-09-06 evening resume note follows for the record.
 
 **Resumed 2026-09-06 evening inside the dogfood capsule on v0.2.10;
 the repin to the rebuilt base is committed and pushed, working tree
