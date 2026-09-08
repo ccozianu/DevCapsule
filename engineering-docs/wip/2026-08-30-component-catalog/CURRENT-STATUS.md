@@ -38,10 +38,19 @@ and runtime sessions against the existing v0.2.10 base. Actionlint 1.7.12 and
 `git diff --check` passed. Runtime metadata now overrides inherited base PEX
 labels with the copied runtime's actual identity.
 
-Next: review the implementation PR, obtain the owner acceptance required by
-*Integration Cadence*, and merge. After integration the owner can apply
+Delivery checkpoint: implementation commit `e6e0808` is pushed on
+`component-catalog/antigravity-cli`. GitHub connector PR creation returned HTTP
+403, "Resource not accessible by integration"; no alternate CLI login is
+configured. **No PR was created.** Open it from
+https://github.com/ccozianu/devcapsule/compare/main...component-catalog/antigravity-cli?expand=1
+or restore the connector's pull-request write access. Then obtain the owner
+acceptance required by *Integration Cadence* and merge. After integration the owner can apply
 v0.2.11 to current remote mainline; no separate version bump or base repin is
-needed. The local smoke artifact is `devcapsule-src/dist/devcapsule-local.pex`.
+needed. The review artifact is `devcapsule-src/dist/devcapsule.pex`, built with
+verified public source revision `e6e08083f05f2540a9b950b9b3cf3672e9a100e0`.
+It reports the local baseline mnemonic v0.2.10-local-linux-x86_64; the final
+v0.2.11 tag supplies the released package version. The earlier local validation
+artifact is `devcapsule-src/dist/devcapsule-local.pex`.
 
 Open threads for this slice: no real GUI/login smoke is claimed; source-form
 launches require an explicitly selected built PEX; base publication remains a
