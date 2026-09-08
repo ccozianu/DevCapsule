@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: paused 2026-09-07 by the product owner after the 0.2.10 walk; resume from *Next Resumable Task*
+State: active 2026-09-08; owner-authorized v0.2.11 release simplification and component build reuse
 
 Integration target: `main`
 
@@ -12,6 +12,42 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Next Resumable Task
+
+The owner resumed this branch on 2026-09-08 and explicitly authorized the
+release simplification discussed here, adding independent component-install
+reuse to the v0.2.11 target. This direct instruction supersedes the previous
+wait for project-management's runtime-delivery disposition for this slice; no
+other workstream's records are edited or its queued design items dispositioned.
+
+Implementation on this branch: tag-derived release package versions; draft,
+verify, publish workflow with retained/reused assets and a release manifest;
+launcher PEX delivery identified by SHA-256 in the formation; runtime-free
+base recipe 7; independent BuildKit contribution stages for tools, IDEs and
+agents, assembled with COPY --link --from. v0.2.11 reuses the pinned v0.2.10
+base; publishing a replacement base is not a prerequisite. Existing project
+locks and sample branches are unchanged.
+
+Validation: full Nox build passed (556 unit tests, one existing xfail, mypy,
+source and PEX smokes, 8 packaging integration tests). The tag test builds
+v98.7.6 from a source baseline of 0.2.10, verifies both installed metadata and
+build identity, and checks source remains unchanged. Docker tests proved cache
+reuse/invalidation, exact launcher delivery to both surface fixtures on Ubuntu,
+and runtime sessions against the existing v0.2.10 base. Actionlint 1.7.12 and
+`git diff --check` passed. Runtime metadata now overrides inherited base PEX
+labels with the copied runtime's actual identity.
+
+Next: review the implementation PR, obtain the owner acceptance required by
+*Integration Cadence*, and merge. After integration the owner can apply
+v0.2.11 to current remote mainline; no separate version bump or base repin is
+needed. The local smoke artifact is `devcapsule-src/dist/devcapsule-local.pex`.
+
+Open threads for this slice: no real GUI/login smoke is claimed; source-form
+launches require an explicitly selected built PEX; base publication remains a
+separate maintenance operation; a partial GitHub asset upload requires recovery
+from the retained Actions artifact. No release has been tagged or published by
+this session. The prior v0.2.10 smoke questions below remain unanswered.
 
 ## Goal
 
@@ -489,7 +525,7 @@ generation holds identical content — success is the only writer, so every
 entry is safe to restore by hand-copy. A guided `config history`/
 `restore` command surface is recorded follow-on work in the decision.
 
-## Next Resumable Task
+## Previous Resume Checkpoint (2026-09-07)
 
 **Paused 2026-09-07 by the product owner; everything committed, PR #61
 (repin, v0.2.9 pin retirement, sync-thread record) and the outbox

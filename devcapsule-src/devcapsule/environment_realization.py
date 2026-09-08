@@ -26,6 +26,7 @@ from devcapsule.project_configuration import (
     authorized_base_selection,
     resolved_checkout_authorizations,
 )
+from devcapsule.runtime_artifact import runtime_artifact
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,7 @@ def realize_environment(
         {}
         if materialize is not None
         else {
+            "runtime_pex": runtime_artifact(),
             "report": report,
             "list_formations": lambda: component_formations(locked.component_id),
         }

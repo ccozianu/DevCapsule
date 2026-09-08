@@ -17,7 +17,7 @@ from devcapsule.host_open import HOST_OPEN_SOCKET_ENV, HostOpenBroker
 
 # The artifact under test is built from this tree, so compare against the
 # authored version, not installed metadata an editable install may have frozen.
-PACKAGE_VERSION = tomllib.loads(
+PACKAGE_VERSION = os.environ.get("DEVCAPSULE_EXPECTED_RELEASE_VERSION") or tomllib.loads(
     (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(
         encoding="utf-8"
     )
@@ -181,7 +181,8 @@ def test_built_pex_exposes_self_contained_source_identity(built_pex: Path) -> No
 
 
 @pytest.mark.integration
-def test_clean_unpublished_revision_can_be_built_for_local_testing(tmp_path: Path) -> None:
+@pytest.mark.parametrize("release", [False, True])
+def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: bool) -> None:
     source_project = Path(__file__).resolve().parents[2]
     repository = tmp_path / "repository"
     project = repository / "devcapsule-src"
@@ -231,6 +232,20 @@ def test_clean_unpublished_revision_can_be_built_for_local_testing(tmp_path: Pat
     ).stdout.strip()
 
     output = project / "dist" / "devcapsule.pex"
+    build_arguments = ["--allow-unpublished-revision"]
+    if release:
+        # A local bare remote stands in for the advertised public revision.
+        # The version deliberately differs from pyproject.toml.
+        remote = tmp_path / "remote.git"
+        subprocess.run(["git", "init", "--bare", "-q", str(remote)], check=True)
+        subprocess.run(["git", "-C", str(repository), "config",
+                        f"url.{remote}.insteadOf",
+                        "https://github.com/example/devcapsule-unpublished-test.git"], check=True)
+        subprocess.run(["git", "-C", str(repository), "tag", "v98.7.6"], check=True)
+        subprocess.run(["git", "-C", str(repository), "push", "origin", "v98.7.6"], check=True,
+                       capture_output=True)
+        build_arguments = ["--release-mnemonic", "v98.7.6", "--source-repository",
+                           "https://github.com/example/devcapsule-unpublished-test"]
     build_environment = {
         name: value
         for name, value in os.environ.items()
@@ -238,11 +253,12 @@ def test_clean_unpublished_revision_can_be_built_for_local_testing(tmp_path: Pat
     }
     build_environment["PYTHON"] = sys.executable
     completed = subprocess.run(
-        [str(scripts / "build-pex.sh"), "--allow-unpublished-revision"],
+        [str(scripts / "build-pex.sh"), *build_arguments],
         check=False,
         text=True,
         capture_output=True,
         env=build_environment,
+        cwd=project,
     )
 
     assert completed.returncode == 0, completed.stderr
@@ -275,8 +291,17 @@ def test_clean_unpublished_revision_can_be_built_for_local_testing(tmp_path: Pat
     )
     value = json.loads(version.stdout)
     assert value["build_mnemonic"] == (
-        f"v{PACKAGE_VERSION}-local-{os.environ.get('DEVCAPSULE_SCIE_PLATFORM', 'linux-x86_64')}"
+        "v98.7.6" if release else
+        f"v{tomllib.loads((project / 'pyproject.toml').read_text())['project']['version']}-local-{os.environ.get('DEVCAPSULE_SCIE_PLATFORM', 'linux-x86_64')}"
     )
+    if release:
+        assert value["version"] == "98.7.6"
+        installed_version = subprocess.check_output(
+            [str(output), "-c", "from importlib.metadata import version; print(version('devcapsule'))"],
+            env={**os.environ, "PEX_INTERPRETER": "1"}, text=True,
+        ).strip()
+        assert installed_version == "98.7.6"
+        assert subprocess.check_output(["git", "-C", str(repository), "diff", "--exit-code"], text=True) == ""
     assert value["source_revision"] == revision
     assert value["source_repository"] == "https://github.com/example/devcapsule-unpublished-test"
     assert value["source_url"].endswith(f"/commit/{revision}")

@@ -9,7 +9,7 @@ from pathlib import Path
 import urllib.error
 import urllib.request
 
-from devcapsule.build_info import BuildInfo, BuildInfoError, read_pex_build_info
+from devcapsule.build_info import BuildInfo, BuildInfoError, current_build_info, read_pex_build_info
 from devcapsule.compat import CliError
 from devcapsule.configurations.pycharm._image_build import BASE_APT_PACKAGES
 from devcapsule.image_build import (
@@ -17,8 +17,9 @@ from devcapsule.image_build import (
     BaseImageComponent,
     BuildComponent,
     BuildxImageBuilder,
+    ContributionComponent,
     EnvComponent,
-    FileComponent,
+    ImageCopyComponent,
     ImageBuildSpec,
     LabelComponent,
 )
@@ -41,7 +42,7 @@ DEFAULT_ROOT_IMAGE = "ubuntu:24.04"
 NVIDIA_CUDA_ROOT_IMAGE = "nvidia/cuda:12.8.1-devel-ubuntu24.04"
 DEFAULT_OUTPUT_IMAGE = "devcapsule-base:latest"
 PEX_DESTINATION = "/opt/devcapsule/bin/devcapsule.pex"
-BASE_RECIPE_VERSION = "6"
+BASE_RECIPE_VERSION = "7"
 DEFAULT_BASE_RECIPE = "ubuntu-24.04"
 NVIDIA_CUDA_BASE_RECIPE = "nvidia-cuda-devel"
 BASE_RECIPE_NAMES = (DEFAULT_BASE_RECIPE, NVIDIA_CUDA_BASE_RECIPE)
@@ -76,7 +77,7 @@ BASE_IMAGE_RECIPES = {
 
 @dataclass(frozen=True)
 class BaseImageBuildOptions:
-    pex: Path
+    pex: Path | None = None
     image: str = DEFAULT_OUTPUT_IMAGE
     root_image: str | None = None
     source_revision: str | None = None
@@ -108,7 +109,8 @@ def file_sha256(path: Path) -> str:
 
 def pex_build_info(options: BaseImageBuildOptions) -> BuildInfo:
     try:
-        info = read_pex_build_info(options.pex.expanduser().resolve())
+        info = (read_pex_build_info(options.pex.expanduser().resolve())
+                if options.pex is not None else current_build_info())
     except BuildInfoError as exc:
         raise CliError(str(exc)) from exc
     if options.source_revision is not None and options.source_revision != info.source_revision:
@@ -160,9 +162,6 @@ def _public_source_error(info: BuildInfo, detail: str) -> CliError:
 
 
 def build_base_image_spec(options: BaseImageBuildOptions) -> ImageBuildSpec:
-    pex = options.pex.expanduser().resolve()
-    if not pex.is_file():
-        raise CliError(f"DevCapsule PEX does not exist: {pex}")
     build_info = pex_build_info(options)
     recipe = base_image_recipe(options.recipe)
     root_image = resolved_root_image(options)
@@ -171,9 +170,12 @@ def build_base_image_spec(options: BaseImageBuildOptions) -> ImageBuildSpec:
         components.extend(
             [
                 AptPackagesComponent(BASE_APT_PACKAGES),
-                node_tooling_component(),
-                temurin_tooling_component(),
-                maven_tooling_component(),
+                ContributionComponent("node", (node_tooling_component(),), ("/opt/node",)),
+                ContributionComponent("temurin", (temurin_tooling_component(),), ("/opt/java",)),
+                ContributionComponent("maven", (
+                    ImageCopyComponent("temurin", "/opt/java", "/opt/java"),
+                    maven_tooling_component(),
+                ), ("/opt/maven",)),
             ]
         )
         components.append(
@@ -190,15 +192,13 @@ def build_base_image_spec(options: BaseImageBuildOptions) -> ImageBuildSpec:
         )
     components.extend(
         [
-            FileComponent(pex, PEX_DESTINATION, permissions=0o755),
             LabelComponent(
                 managed_labels(BASE_KIND, options.image)
                 + (
                     ("devcapsule.base.recipe", recipe.name),
                     ("devcapsule.base.recipe-version", BASE_RECIPE_VERSION),
                     ("devcapsule.base.recipe-status", recipe.status),
-                    ("devcapsule.pex.sha256", file_sha256(pex)),
-                    ("devcapsule.pex.build-mnemonic", build_info.build_mnemonic),
+                    ("devcapsule.base.runtime", "launcher-supplied"),
                     ("devcapsule.source.repository", build_info.source_repository),
                     ("devcapsule.source.revision", build_info.source_revision),
                     ("devcapsule.source.url", build_info.source_url),

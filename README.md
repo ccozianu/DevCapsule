@@ -70,19 +70,29 @@ cd devcapsule-src
 .venv/bin/python -m nox -s build
 ```
 
-Advance the Python distribution version deliberately before preparing a new
-release. The bump accepts `major`, `minor`, `patch`, or an explicit greater
-`MAJOR.MINOR.PATCH` value and updates every checked-in version source together:
+Release by pushing a numeric `vMAJOR.MINOR.PATCH` tag on `main`:
 
 ```text
-cd devcapsule-src
-.venv/bin/python -m nox -s bump -- patch
+git fetch origin
+git tag v0.2.11 origin/main
+git push origin v0.2.11
 ```
 
-Review and commit the bump, then run the full build again. The package version
-is the release identity: official releases are tagged `v<version>`, and local
-builds derive a `v<version>-local[-<platform>]` mnemonic from it. Only the
-immutable source revision embedded in each PEX is a separate identity.
+The tag supplies the distribution version; no version-bump commit is required.
+CI verifies mainline membership, builds and validates the PEX, stages the assets
+in a draft GitHub release, verifies the downloaded bytes, then publishes.
+Retries reuse staged bytes. The checked-in `pyproject.toml` version is only the
+source/local-build baseline; the release builder stamps the tag-derived version
+into its disposable packaging tree.
+
+New base images contain tools and OS dependencies; the launcher supplies its own
+PEX during environment materialization. Ordinary CLI releases reuse the pinned
+base. Component installations use independent BuildKit stages and copy their
+outputs into environments, preserving cache reuse across different formations.
+
+For source-form environment launches, first build the PEX (`nox -s pex`), then
+run that artifact, or set `DEVCAPSULE_RUNTIME_PEX` to its absolute path when
+invoking the source CLI. Rebuild and reselect it after runtime source changes.
 
 Calling the virtualenv's interpreter directly is intentional: it works without
 shell activation and cannot silently fall through to `/usr/bin/python` because

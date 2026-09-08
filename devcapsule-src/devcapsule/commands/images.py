@@ -6,7 +6,6 @@ import argparse
 from pathlib import Path
 import sys
 from typing import Mapping
-import zipfile
 
 from python_on_whales import docker
 from python_on_whales.exceptions import DockerException
@@ -76,7 +75,8 @@ class ImagesBuildCommand(Command):
         parser.add_argument(
             "--from", dest="root_image", help="Override the recipe's default root image."
         )
-        parser.add_argument("--pex", type=_existing_file)
+        parser.add_argument("--pex", type=_existing_file,
+                            help="Optional recipe-builder PEX for source provenance; never embedded in the base.")
         parser.add_argument(
             "--source-revision",
             help="Assert the source revision already embedded in the selected PEX.",
@@ -131,7 +131,7 @@ class ImagesBuildCommand(Command):
         ):
             raise CliError("--project, --base, and --alias apply only to environment builds.")
         selected_pex = (
-            arguments.pex.expanduser().resolve() if arguments.pex is not None else _running_pex()
+            arguments.pex.expanduser().resolve() if arguments.pex is not None else None
         )
         selected_recipe = base_image_recipe(arguments.recipe)
         options = BaseImageBuildOptions(
@@ -161,8 +161,7 @@ class ImagesBuildCommand(Command):
         recipe_version = labels.get("devcapsule.base.recipe-version", BASE_RECIPE_VERSION)
         recipe_status = labels.get("devcapsule.base.recipe-status", selected_recipe.status)
         print(f"Base recipe: {recipe_name}@{recipe_version} ({recipe_status.upper()})")
-        print(f"DevCapsule build: {labels.get('devcapsule.pex.build-mnemonic', 'unknown')}")
-        print(f"PEX SHA-256: {labels.get('devcapsule.pex.sha256', 'unknown')}")
+        print("Runtime: supplied by the launcher when materializing an environment")
         print(f"Source revision: {labels.get('devcapsule.source.revision', 'unknown')}")
         print(f"Source URL: {labels.get('devcapsule.source.url', 'unknown')}")
         verification = (
@@ -185,13 +184,6 @@ class ImagesCommand(Group):
             ImagesListCommand.name: ImagesListCommand,
             ImagesBuildCommand.name: ImagesBuildCommand,
         }
-
-
-def _running_pex() -> Path:
-    candidate = Path(sys.argv[0]).expanduser().resolve()
-    if candidate.is_file() and zipfile.is_zipfile(candidate):
-        return candidate
-    raise CliError("--pex is required when DevCapsule is not running from a PEX artifact.")
 
 
 def _print_table(records: tuple[LocalImageRecord, ...]) -> None:

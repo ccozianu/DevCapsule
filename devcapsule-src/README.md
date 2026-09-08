@@ -324,7 +324,7 @@ read-only and performs no registry access.
 Build the JetBrains-free DevCapsule base:
 
 ```bash
-# From a source/editable installation, identify the PEX to embed.
+# From a source/editable installation, identify the builder PEX for provenance.
 devcapsule images build \
   --type base \
   --tag devcapsule-base:debug-v023 \
@@ -332,7 +332,7 @@ devcapsule images build \
   --source-revision "$(git rev-parse HEAD)" \
   --network host
 
-# When invoked from a PEX, that PEX is embedded by default.
+# When invoked from a PEX, its source identity is used by default.
 dist/devcapsule.pex images build \
   --type base \
   --tag devcapsule-base:debug-v023 \
@@ -365,14 +365,14 @@ the `sudo` binary. It also installs the pinned language-tooling baseline:
 Node.js `v22.23.1` with bundled npm, Eclipse Temurin JDK `25.0.4+7`, and Apache
 Maven `3.9.16`. `JAVA_HOME` is `/opt/java/current`, `MAVEN_HOME` is
 `/opt/maven/current`, and the Maven, Java, and Node `bin` directories are on
-executable `PATH`. The selected DevCapsule PEX is embedded at
-`/opt/devcapsule/bin/devcapsule.pex`.
+executable `PATH`. Recipe 7 adds no DevCapsule runtime. The launcher supplies
+its PEX at `/opt/devcapsule/bin/devcapsule.pex` in each derived environment.
 
 The repository-owned Python build plan is the inspectable source of truth:
 
 - [`devcapsule/base_image.py`](devcapsule/base_image.py) defines the curated
   `ubuntu-24.04` and WIP `nvidia-cuda-devel` recipes, root images, managed-image
-  labels, embedded PEX, and generic entrypoint/CMD.
+  labels, and independent tool-installation contributions.
 - [`devcapsule/configurations/pycharm/_image_build.py`](devcapsule/configurations/pycharm/_image_build.py)
   currently owns `BASE_APT_PACKAGES`, the exact Ubuntu package list shared by
   the Python-owned base planner. Despite that transitional module location,
@@ -421,8 +421,10 @@ buildx. Host mode is an explicit build-time isolation relaxation and adds the
 BuildKit `network.host` entitlement; it does not configure the network of later
 runtime containers.
 The resulting image carries the V1 managed marker, metadata version, base kind,
-canonical name, recipe name/status/version, PEX digest, the embedded PEX source
-identity, and OCI-standard source/revision labels. `--source-revision` is an
+canonical name, recipe name/status/version, builder source identity, and
+OCI-standard source/revision labels. Recipe 7 omits the runtime PEX; each
+environment receives the launching PEX at materialization, and its checksum
+is part of the formation identity. `--source-revision` is an
 assertion against the PEX rather than an independent label value, so the image
 cannot silently claim a different commit. `images build --type base` is the
 sole supported base-build command; there is no compatibility `build-base`
@@ -445,6 +447,27 @@ Do not use `dist/devcapsule-local.pex` for a public base. If a revision
 mismatch reports that the selected PEX embeds `unknown`, rebuild
 `dist/devcapsule.pex` with the default `scripts/build-pex.sh`, inspect it with
 `dist/devcapsule.pex version --json`, and retry.
+
+### Shared component installations
+
+Node, Temurin, and Maven install in separate BuildKit stages when building a
+base. IDEs and locally acquired agents likewise contribute separate stages to
+environment builds. Each stage exports only its installation paths; final
+images use `COPY --link --from` to assemble those paths. Updating a surface,
+sibling component, or launcher does not rerun an unchanged component installer.
+Maven's installation stage explicitly depends on the JDK it uses for validation.
+
+Reuse is per Docker builder and lasts while its BuildKit cache is retained.
+Changed parent images, installation recipes, or component inputs invalidate the
+corresponding stage. A fresh host or a pruned cache rebuilds it. Component cache
+images are not published; acquisition authorizations and checksum checks still
+apply before installation, and credentials/state never enter these stages.
+
+The packaged launcher supplies its own PEX automatically. For source-form
+launches, build with `nox -s pex` and either run `dist/devcapsule-local.pex` or
+set `DEVCAPSULE_RUNTIME_PEX` to the built artifact's absolute path. Existing
+project locks remain valid; the chosen runtime digest changes the local
+formation identity without rewriting those locks.
 
 ### Declared checkout configuration values
 

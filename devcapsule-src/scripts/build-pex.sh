@@ -184,10 +184,11 @@ if [[ -n "${release_mnemonic}" ]]; then
     echo "scripts/build-pex.sh: --release-mnemonic cannot mark a local or unpublished build" >&2
     exit 2
   fi
-  if [[ "${release_mnemonic}" != "v${project_version}" ]]; then
-    echo "scripts/build-pex.sh: release mnemonic ${release_mnemonic} must be v${project_version}, the checked-in package version" >&2
+  if [[ ! "${release_mnemonic}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+    echo "scripts/build-pex.sh: release mnemonic must be vMAJOR.MINOR.PATCH" >&2
     exit 2
   fi
+  project_version="${release_mnemonic#v}"
   tagged_revision="$(git -C "${repo_root}" rev-list -n 1 "refs/tags/${release_mnemonic}" 2>/dev/null || true)"
   if [[ -z "${repo_root}" || "${tagged_revision}" != "${head_revision}" ]]; then
     echo "scripts/build-pex.sh: release mnemonic ${release_mnemonic} must be an exact tag for checkout HEAD" >&2
@@ -236,6 +237,19 @@ build_root="$(mktemp -d "${TMPDIR:-/tmp}/devcapsule-pex-build.XXXXXXXX")"
 trap 'rm -rf "${build_root}"' EXIT
 cp "${project_dir}/pyproject.toml" "${project_dir}/README.md" "${build_root}/"
 cp -a "${project_dir}/devcapsule" "${build_root}/devcapsule"
+# The tag is the release version authority. Change only the disposable build
+# tree; the tagged source remains clean and needs no version-bump commit.
+"${python_bin}" - "${build_root}/pyproject.toml" "${project_version}" <<'PY'
+from pathlib import Path
+import re
+import sys
+path = Path(sys.argv[1])
+text, count = re.subn(r'^version = "[^"]+"$', f'version = "{sys.argv[2]}"',
+                      path.read_text(), count=1, flags=re.MULTILINE)
+if count != 1:
+    raise SystemExit("Cannot stamp the package version")
+path.write_text(text)
+PY
 "${python_bin}" - \
   "${build_root}/devcapsule/_build_info.json" \
   "${project_version}" \

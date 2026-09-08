@@ -97,7 +97,7 @@ skip_covered = true
 
 [tool.mypy]
 python_version = "3.12"
-files = ["devcapsule", "tests", "noxfile.py", "scripts/bump-version.py"]
+files = ["devcapsule", "tests", "noxfile.py", "scripts/bump-version.py", "scripts/release-manifest.py"]
 # Sample projects are independent submodules with their own dependencies. They
 # are checked by their own tooling, not by DevCapsule's gate.
 exclude = "(^|/)tests/resources/sample_projects/"

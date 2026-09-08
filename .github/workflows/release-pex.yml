@@ -38,13 +38,17 @@ jobs:
 
       - name: Verify the selected tag and revision
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v[0-9][0-9A-Za-z._-]*$ ]]; then
-            echo "Release tags must start with v plus a digit and use only letters, digits, dot, underscore, or hyphen." >&2
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Release tags must be vMAJOR.MINOR.PATCH." >&2
             exit 2
           fi
           tag_revision="$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")"
           checkout_revision="$(git rev-parse HEAD)"
           test "$checkout_revision" = "$tag_revision"
+          git fetch origin main
+          git rev-list --first-parent origin/main > "$RUNNER_TEMP/mainline-revisions"
+          grep -Fx "$tag_revision" "$RUNNER_TEMP/mainline-revisions"
+          echo "DEVCAPSULE_EXPECTED_RELEASE_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
 
       - name: Set up Python 3.12 for the backend build
         uses: actions/setup-python@v5
@@ -62,7 +66,23 @@ jobs:
       - name: Run source tests and type checks
         run: python -m nox -s syntax tests typecheck
 
+      - name: Recover previously staged artifacts
+        id: recover
+        run: |
+          mkdir -p dist
+          gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq '.[].tag_name' > "$RUNNER_TEMP/releases"
+          if grep -Fxq "$RELEASE_TAG" "$RUNNER_TEMP/releases"; then
+            gh release download "$RELEASE_TAG" --dir dist \
+              --pattern devcapsule.pex --pattern devcapsule.pex.sha256 \
+              --pattern release-manifest.json
+            (cd dist && sha256sum --check devcapsule.pex.sha256)
+            python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)" --verify
+            chmod 0755 dist/devcapsule.pex
+            echo 'exists=true' >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build the self-contained release PEX
+        if: steps.recover.outputs.exists != 'true'
         env:
           DEVCAPSULE_SOURCE_REPOSITORY: ${{ github.server_url }}/${{ github.repository }}
         run: |
@@ -73,6 +93,7 @@ jobs:
           dist/devcapsule.pex version --json | tee dist/devcapsule-version.json
           test "$(python -c 'import json; print(json.load(open("dist/devcapsule-version.json"))["build_mnemonic"])')" = "$RELEASE_TAG"
           (cd dist && sha256sum devcapsule.pex > devcapsule.pex.sha256)
+          python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)"
 
       - name: Run packaging integration tests against the release PEX
         env:
@@ -89,6 +110,21 @@ jobs:
           DEVCAPSULE_EXPECTED_BUILD_MNEMONIC: ${{ env.RELEASE_TAG }}
         run: python -m nox -s pex_clean_machine
 
+      - name: Verify component cache reuse and launcher delivery
+        env:
+          DEVCAPSULE_PEX_UNDER_TEST: ${{ github.workspace }}/devcapsule-src/dist/devcapsule.pex
+        run: python -m pytest --no-cov -m e2e tests/e2e/test_component_cache.py
+
+      - name: Verify pinned base availability and runtime sessions
+        env:
+          DEVCAPSULE_PEX_UNDER_TEST: ${{ github.workspace }}/devcapsule-src/dist/devcapsule.pex
+        run: |
+          python -c 'import json; print("\n".join(json.load(open("dist/release-manifest.json"))["base-references"]))' > "$RUNNER_TEMP/release-bases"
+          while IFS= read -r base; do
+            docker pull "$base"
+            DEVCAPSULE_E2E_BASE_IMAGE="$base" python -m pytest --no-cov -m e2e tests/e2e/test_runtime_image.py
+          done < "$RUNNER_TEMP/release-bases"
+
       - name: Retain the backend build
         uses: actions/upload-artifact@v4
         with:
@@ -96,29 +132,18 @@ jobs:
           path: |
             devcapsule-src/dist/devcapsule.pex
             devcapsule-src/dist/devcapsule.pex.sha256
-            devcapsule-src/dist/devcapsule-version.json
+            devcapsule-src/dist/release-manifest.json
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create the release or verify its existing assets
+      - name: Stage the verified release
+        if: steps.recover.outputs.exists != 'true'
         run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            existing="$RUNNER_TEMP/existing-release"
-            mkdir -p "$existing"
-            gh release download "$RELEASE_TAG" \
-              --pattern devcapsule.pex \
-              --pattern devcapsule.pex.sha256 \
-              --dir "$existing"
-            (cd "$existing" && sha256sum --check devcapsule.pex.sha256)
-            cmp dist/devcapsule.pex "$existing/devcapsule.pex"
-            cmp dist/devcapsule.pex.sha256 "$existing/devcapsule.pex.sha256"
-          else
-            gh release create "$RELEASE_TAG" \
-              "dist/devcapsule.pex#Self-contained Linux x86-64 CLI" \
-              "dist/devcapsule.pex.sha256#SHA-256 checksum" \
-              --verify-tag \
-              --generate-notes
-          fi
+          gh release create "$RELEASE_TAG" \
+            "dist/devcapsule.pex#Self-contained Linux x86-64 CLI" \
+            "dist/devcapsule.pex.sha256#SHA-256 checksum" \
+            "dist/release-manifest.json#Release inputs and artifact checksums" \
+            --verify-tag --generate-notes --draft
 
       - name: Download and verify the published assets
         run: |
@@ -127,9 +152,11 @@ jobs:
           gh release download "$RELEASE_TAG" \
             --pattern devcapsule.pex \
             --pattern devcapsule.pex.sha256 \
+            --pattern release-manifest.json \
             --dir "$published"
           (cd "$published" && sha256sum --check devcapsule.pex.sha256)
           cmp dist/devcapsule.pex "$published/devcapsule.pex"
+          cmp dist/release-manifest.json "$published/release-manifest.json"
           chmod 0755 "$published/devcapsule.pex"
 
       - name: Prove the downloaded PEX without Python or networking
@@ -137,6 +164,12 @@ jobs:
           DEVCAPSULE_PEX_UNDER_TEST: ${{ runner.temp }}/published-release/devcapsule.pex
           DEVCAPSULE_EXPECTED_BUILD_MNEMONIC: ${{ env.RELEASE_TAG }}
         run: python -m nox -s pex_clean_machine
+
+      - name: Publish the complete release
+        run: |
+          if [ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true ]; then
+            gh release edit "$RELEASE_TAG" --draft=false
+          fi
 
       - name: Summarize the release
         run: |

@@ -1,150 +1,114 @@
 # DevCapsule Release And Validation Process
 
-Recorded 2026-09-01 at the product owner's direction, from the v0.2.8
-release preparation. This is the process as the tooling actually enforces
-it; where a step is convention rather than enforcement, that is said
-explicitly.
+Originally recorded 2026-09-01. Revised for the owner's 2026-09-08 direction:
+a version tag on mainline is the only ordinary release action; component
+installations are reused across image builds.
 
-## Version Identity
+## Release Identity And Trigger
 
-The distribution version is authored in exactly one place: the `[project]`
-table of `devcapsule-src/pyproject.toml`. Everything else derives it:
+After the content has landed on `main`, push `vMAJOR.MINOR.PATCH` at the desired
+mainline commit. `.github/workflows/release-pex.yml` checks the exact tag and
+requires its commit to appear in `main`'s first-parent history. It does not
+require the commit to remain the tip while the release runs.
 
-- `python -m nox -s bump -- patch|minor|major|X.Y.Z` rewrites that single
-  line and refuses malformed, equal, or decreasing versions.
-- Runtime code reads the authored file in a source checkout and installed
-  metadata elsewhere (`build_info.current_build_info`); built artifacts
-  carry the record `scripts/build-pex.sh` stamps.
-- The official release tag is exactly `v<version>` — `build-pex.sh`
-  refuses a `--release-mnemonic` that differs from the checked-in version
-  or is not an exact tag for checkout `HEAD`, so tag and version cannot
-  disagree in a published artifact.
-- A source checkout has no build record at all; its absence is what
-  defines a source-form run, reported as `v<version>-local`. Contributor
-  binaries report `v<version>-local-<platform>`.
+The tag supplies the package version. `scripts/build-pex.sh` stamps both the
+package metadata and `_build_info.json` in its temporary build directory. The
+tagged source is unchanged: there is no bump PR, repin commit, or follow-up
+version commit. `pyproject.toml` remains the fallback version for source/local
+builds; `nox -s bump` is optional maintenance of that baseline, not a release
+step. Local mnemonics retain `-local` and official mnemonics equal the tag.
 
-## Validation
+## Automated Release
 
-Two halves, by who can run them:
+The tag workflow:
 
-**The mechanical gate** is `python -m nox -s build`, one command running
-in order: locked dependency install, version-form check, Python and shell
-syntax checks, mypy, the unit suite, the source-tree CLI smoke, a local
-PEX build, the same smoke against that artifact, and the packaging
-integration tests. The public `dist/devcapsule.pex` is built only when
-the repository is clean and the revision is published; otherwise the
-session finishes with the local validation artifact and says so. Any
-agent or CI run can execute this gate.
+1. Verifies source identity, runs syntax checks, unit tests and mypy.
+2. Recovers the exact assets of an existing draft or published release, or
+   builds the self-contained PEX once when no release has been staged.
+3. Records the source revision, tag-derived version, selected base references
+   and PEX checksum in `release-manifest.json`.
+4. Runs packaging integration tests and the clean-machine proof with no Python
+   or networking, plus Docker checks for component-install reuse and exact
+   launcher delivery into both surface families, then pulls each selected base
+   by digest and exercises runtime sessions against it. These use fixture IDEs;
+   they do not claim a real GUI or authenticated provider smoke.
+5. Retains build artifacts, creates a draft release with notes and checksums,
+   downloads and compares the staged bytes, and proves the downloaded PEX.
+6. Publishes the complete draft. A rerun verifies and tests staged bytes;
+   it does not replace a published artifact with a fresh rebuild.
 
-**The product-owner smoke** is manual and deliberate: for component work
-it is the workstream's validation bar (unit tests pass plus a smoke test
-performed by hand by the product owner) and it bounds integration pace.
-Plan sessions to end at smoke-testable points.
+An incomplete or inconsistent existing asset set fails explicitly rather than
+silently overwriting it. The Actions artifact retains the completed build for
+recovery from a partial upload. A source defect requires a new commit and tag;
+published tags and assets must never be moved or replaced. Tag creation does
+not require a second manual publication approval.
 
-## Release Steps, In Order
+## Runtime Delivery And Base Lifecycle
 
-1. **Land the content on `main`** through ordinary pull requests. Release
-   artifacts are cut from published revisions only; `build-pex.sh`
-   verifies the exact commit is advertised by the public GitHub
-   repository.
-2. **Bump the version** — one edited line via `nox -s bump` — and land it
-   by pull request so the release revision's CI is green *before* the tag
-   exists. This ordering is convention, not enforcement: the tag is
-   immutable identity, so nothing should be tagged that CI has not
-   already accepted.
-3. **If the release must repin the base image**, do it before tagging
-   (see *Base Image Releases* below): the released PEX embeds the
-   resolution matrix, so a repin that misses the tag ships a client
-   pinning the previous base.
-4. **Tag the release revision** `v<version>` and push the tag.
-5. **The `release-pex.yml` workflow** fires on the tag: it rebuilds from
-   the tagged revision, runs tests and type checks, builds the scie PEX,
-   asserts the embedded mnemonic equals the tag, runs the packaging
-   integration tests, proves the artifact on a clean machine without
-   Python or networking, publishes `devcapsule.pex` and its checksum to
-   GitHub Releases, then downloads the published assets and proves them
-   again. Re-running via `workflow_dispatch` against an existing tag
-   verifies the published assets byte-for-byte instead of republishing.
-6. **Verify as an adopter would**: download the release asset, check the
-   checksum, run `devcapsule.pex version --json`, and confirm the
-   mnemonic, version, and source URL name the tagged revision.
+Recipe 7 produces a base containing the existing OS libraries and developer
+tools, with no DevCapsule PEX or entrypoint added by the recipe. The builder's
+source identity remains recorded as provenance; `--pex`, when supplied, selects
+provenance metadata, not bytes to embed. Running the packaged builder uses its
+own source identity by default. The public-revision checks still apply.
 
-## Base Image Releases
+The launcher copies its exact executable PEX into the materialized environment
+at `/opt/devcapsule/bin/devcapsule.pex`. Its SHA-256 is part of the formation
+descriptor, so a launcher update creates a new local formation and cannot reuse
+an image carrying an older runtime. Component installation stages are shared
+between those formations. Source-form launches explicitly select a built PEX
+through `DEVCAPSULE_RUNTIME_PEX`, or invoke the built artifact directly.
 
-The base image is a separate, less frequent artifact; most releases ship
-only the PEX. When a release changes what containers must understand —
-new runtime-plan adapters, entrypoint behavior — the base must be rebuilt
-and repinned, and the ordering is forced by a dependency cycle: the
-matrix pin needs the pushed image's digest, and the released PEX needs
-the matrix pin.
+Ordinary CLI releases reuse the catalog's pinned base. In particular, v0.2.11
+can use the published v0.2.10 base and replace its inherited runtime in the
+derived image. Existing base tags and project locks are unchanged. This avoids
+a mandatory Docker Hub publication, digest repin, sample migration, and owner
+smoke cycle every time the CLI version advances.
 
-1. Build the base from a published revision:
-   `devcapsule images build --recipe ubuntu-24.04 --pex dist/devcapsule.pex
-   --source-revision <sha> --tag docker.io/mycodespaceai/devcapsule-base:<label>`.
-   The build refuses a PEX without a verified public revision and stamps
-   the PEX digest and source identity into the image labels.
-2. Push the image and record the registry digest.
-3. Land the repin commit: in `resolution_matrix.py`, update `_BASE_TABLE`
-   with the new registry digest and build mnemonic, and advance
-   `MATRIX_VERSION`.
-4. Only then tag the distribution release, so the published client's
-   embedded matrix pins the new base.
+Base maintenance has an independent cadence: update dependencies, build and
+validate the base, publish under a fresh immutable name, then review its digest
+pin as an ordinary catalog change. A base is not named after every CLI release.
+This change does not introduce automatic base publication or choose a new
+permanent base-naming scheme. Explicit dependency updates remain necessary for
+security fixes; retaining a cached base is not a dependency-update policy.
 
-The base's own embedded runtime PEX is one commit behind the release it
-serves (it predates the repin commit); this is harmless because the
-runtime never consults the resolution matrix, and the image labels record
-the true source revision. Building and pushing the base is manual as of
-this writing; automating it as a `workflow_dispatch` job with a Docker
-Hub credential was assessed and deferred.
+## Independent Component Contributions
 
-## Base Image Naming (convention recorded 2026-09-05, product-owner
-prompted)
+`ContributionComponent` describes installation steps and the paths they export.
+The renderer emits a shared baseline stage, an independent stage for each
+contribution, and a final image assembled with `COPY --link --from`.
 
-The registry history carries two schemes — `ubuntu-24.04-v019` through
-`ubuntu-24.04-v026`, then `v0.2.7`/`v0.2.8`/`v0.2.9` — because the
-naming silently migrated when bases started embedding the client's
-runtime PEX. The convention going forward:
+- Base builds isolate Node, Temurin and Maven. Maven explicitly consumes the
+  JDK stage for its installation-time verification; it exports only Maven.
+- Environment builds isolate the IDE and each ancillary component. All of a
+  component's npm packages remain one offline install, preserving the vendor's
+  multi-file layout. Environment variables are composed in the final image.
+- Component contexts have stable names independent of sibling ordering. A
+  different IDE, agent or launcher does not invalidate another installer.
+- BuildKit supplies cache identities from the parent image, platform, commands
+  and file inputs. A version/recipe/parent change rebuilds the affected stage.
+  Reuse lasts while that builder retains its cache; another host or cache
+  pruning requires rebuilding. No component images or credentials are published.
+- Only declared installation paths are exported. System-package side effects
+  cannot be handled by copying an arbitrary installation directory; apt's
+  shared baseline remains a complete filesystem layer.
 
-- **Repository**: `docker.io/mycodespaceai/devcapsule-base`.
-- **Tag**: `v<client-version>` — the DevCapsule release whose runtime
-  PEX the base embeds (`v0.2.8`, `v0.2.9`). A base-only revision
-  between client releases (recipe hygiene, package refresh — anything
-  that re-embeds the *same* runtime) appends a fourth segment:
-  `v0.2.9.1`, `v0.2.9.2`.
-- **Tags are immutable releases.** Never rebuild or retag an existing
-  tag: a rebuild under a published name would orphan the matrix pin,
-  whose digest no longer matches what the tag serves. Any rebuild is a
-  new tag. Trust and the matrix pin bind to the registry digest; the
-  tag exists for human addressing.
-- **The base family stays out of the tag.** The family (`ubuntu-24.04`)
-  is the unit a validation holds for and lives in the resolution matrix
-  (D-0007 as amended 2026-09-02 and 2026-09-06); the tag names a
-  release. The two advance independently — most new tags join the
-  incumbent family and inherit its validations.
-- **Legacy tags** (`ubuntu-24.04-v019` … `-v026`) predate the
-  convention and stay exactly as published; the matrix addresses them
-  by mnemonic and digest like any other pin.
+The Docker regression test makes an installer emit a random identifier, builds
+two different images with reordered/changed siblings and a changed launcher,
+and verifies identical identifiers. A changed recipe must emit a new one.
+This tests reuse itself rather than only the generated Dockerfile text.
 
-## Compatibility Bounds
+## Validation And Integration
 
-- The matrix version is informational (`R-COMPAT-001`): a newer client's
-  matrix changes what is *generated next time*, never the validity of a
-  lock that stands.
-- A newer client runs against an older base as long as the base's
-  embedded runtime PEX understands the runtime plans the client's locks
-  produce — validated 2026-09-01: the 0.2.8 client operates correctly
-  against the v026 (0.2.7-era) base for the surfaces that base already
-  knew. The failing direction is a lock naming an adapter the base
-  predates (the codium surface against v026), which the container rejects
-  at plan time; until a repinned base ships, such launches need the
-  runtime-PEX override volume
-  (`-- --volume <host-pex>:/opt/devcapsule/bin/devcapsule.pex:ro`, host
-  path, since raw passthrough options are not bind-translated).
+`nox -s build` remains the local gate. The explicit Docker cache/runtime check
+is `python -m pytest --no-cov -m e2e tests/e2e/test_component_cache.py` after
+building the local PEX and making `ubuntu:24.04` available. The release workflow
+runs it against the actual release artifact. Packaging tests also build a tag
+whose version differs from the source baseline and verify source remains clean.
 
-## Known Gaps
+Product-owner GUI/login acceptance for changed component behavior remains part
+of development and integration. Fixture tests do not replace that evidence or
+convert provisional matrix entries. Publishing an unchanged, accepted
+component combination should not repeat the manual release walk.
 
-- The bump-by-PR-before-tag rule and the base-release ordering are
-  convention; only the tag↔version weld and the published-revision checks
-  are enforced. A future `release-base.yml` and any pin-advance policy
-  belong with the component update mechanism work already recorded in the
-  component-catalog workstream.
+Docker's behavior is documented in [multi-stage builds](https://docs.docker.com/build/building/multi-stage/)
+and [`COPY --link`](https://docs.docker.com/reference/dockerfile/#copy---link).

@@ -78,31 +78,11 @@ def test_pex_runtime_help_inside_disposable_image(tmp_path: Path, built_pex: Pat
             str(tmp_path),
         )
         inspection = json.loads(command(docker, "image", "inspect", image).stdout)[0]
-        assert inspection["Config"]["Entrypoint"] == [
-            "/opt/devcapsule/bin/devcapsule.pex",
-            "runtime",
-        ]
-        assert inspection["Config"]["Cmd"] == ["/etc/devcapsule/runtime-plan.json"]
         assert inspection["Config"]["Labels"]["devcapsule.image.kind"] == "base"
-        assert inspection["Config"]["Labels"]["devcapsule.pex.sha256"] == file_sha256(built_pex)
+        assert inspection["Config"]["Labels"]["devcapsule.base.runtime"] == "launcher-supplied"
 
         python = command(docker, "run", "--rm", "--entrypoint", "python3.12", image, "--version")
         assert python.stdout.startswith("Python 3.12")
-        in_image_digest = command(
-            docker,
-            "run",
-            "--rm",
-            "--entrypoint",
-            "sha256sum",
-            image,
-            "/opt/devcapsule/bin/devcapsule.pex",
-        ).stdout.split()[0]
-        assert in_image_digest == file_sha256(built_pex)
-
-        completed = command(docker, "run", "--rm", "--network", "none", image, "--help", check=False)
-        assert completed.returncode == 0, completed.stderr
-        assert "usage: devcapsule runtime RUNTIME_PLAN.json" in completed.stdout
-
         archive = tmp_path / "pycharm-fixture.tar.gz"
         payload = create_jetbrains_fixture(archive)
         artifact = ArtifactSpec("fixture-1", archive.as_uri(), hashlib.sha256(payload).hexdigest())
@@ -138,9 +118,25 @@ def test_pex_runtime_help_inside_disposable_image(tmp_path: Path, built_pex: Pat
             cache_root=cache,
             inspect_image=inspect_image,
             build=build_materialized,
+            runtime_pex=built_pex,
         )
         assert created is True
         assert build_count == 1
+        in_image_digest = command(
+            docker,
+            "run",
+            "--rm",
+            "--entrypoint",
+            "sha256sum",
+            materialized_image,
+            "/opt/devcapsule/bin/devcapsule.pex",
+        ).stdout.split()[0]
+        assert in_image_digest == file_sha256(built_pex)
+
+        completed = command(docker, "run", "--rm", "--network", "none", materialized_image, "--help", check=False)
+        assert completed.returncode == 0, completed.stderr
+        assert "usage: devcapsule runtime RUNTIME_PLAN.json" in completed.stdout
+
         command(
             docker,
             "run",
@@ -182,6 +178,7 @@ def test_pex_runtime_help_inside_disposable_image(tmp_path: Path, built_pex: Pat
             cache_root=cache,
             inspect_image=inspect_image,
             build=build_materialized,
+            runtime_pex=built_pex,
         )
         assert reused_image == materialized_image
         assert created is False

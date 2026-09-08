@@ -481,7 +481,7 @@ def test_images_build_base_maps_cli_options(tmp_path: Path, capsys) -> None:
     assert build.call_args.kwargs == {"network": "host"}
     output = capsys.readouterr().out
     assert "Image ID: sha256:abc123" in output
-    assert "DevCapsule build: v026" in output
+    assert "Runtime: supplied by the launcher" in output
     assert "Source verification: public GitHub commit reachable" in output
 
 
@@ -546,7 +546,7 @@ def test_images_build_base_requires_pex_from_source(tmp_path: Path, capsys) -> N
         )
 
     assert result == 2
-    assert "--pex is required" in capsys.readouterr().err
+    assert "Expected source revision" in capsys.readouterr().err
 
 
 def test_images_build_base_defaults_to_running_pex(tmp_path: Path, capsys) -> None:
@@ -567,7 +567,7 @@ def test_images_build_base_defaults_to_running_pex(tmp_path: Path, capsys) -> No
             == 0
         )
 
-    assert build.call_args.args[0].pex == pex.resolve()
+    assert build.call_args.args[0].pex is None
     assert build.call_args.args[0].recipe == "ubuntu-24.04"
     assert build.call_args.args[0].allow_local_source is True
     assert "Source verification: bypassed for explicit local source" in capsys.readouterr().out
