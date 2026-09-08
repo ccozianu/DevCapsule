@@ -203,6 +203,58 @@ current remote `main` at `a72d0a8` before project-management work resumed.
   tests plus a product-owner smoke test). The registration travels this
   branch under the same target-lands-no-later-than-the-reference latitude as
   the supervisor-core assignment above.
+- **Found 2026-09-08: the outbox-reset loss recurred, and this time it took
+  a real item.** `component-catalog` sent
+  `2026-09-06-component-catalog-one-devcapsule-inside-and-outside.md` to this
+  intake on 2026-09-06 and recorded the send in its handoff (`4e00985`, on
+  `main` through PR #61) as outbox `802adaf`; its 2026-09-07 pause note
+  records the delivery as merged. Neither is true of `main`. Verified against
+  every ref in this clone: `802adaf` is not a valid object, the filename
+  appears in no tree on any branch, and `component-catalog/outbox` was reset
+  from `main` at `8d7d2fa` on 2026-09-07 (`47b4442`) carrying only the
+  registry row and the handoff copy. This is exactly the mechanism answered
+  on 2026-08-29 under `2026-08-17-recursive-e2e-audit-undelivered-work.md` —
+  a send resets the outbox from current `main` and carries only what is being
+  sent, with no rule protecting unreceived mail — and it is the **third**
+  recorded occurrence, after the 2026-08-16 pair that sat undelivered until
+  `PR #25` and the audit request `ebad342` that was orphaned by a later reset
+  and recovered only through `PR #43`. The 2026-08-29 disposition routed
+  prevention to `workflow-improvements` "when it next resumes" and observed
+  that the exposure ends structurally only when a send stops implying a reset
+  while unreceived mail exists; `WORKFLOW.md` has been frozen until a release
+  candidate since 2026-08-30, so the exposure was knowingly left standing and
+  has now been paid for a third time. Two consequences worth separating:
+  - **The item is recovered**, reconstructed into this intake under its
+    original filename so the handoff pointer resolves, and labelled as a
+    reconstruction. The owner's question, the diagnosis, the recommended
+    shape, and the 0.2.10 advice are recovered from the `component-catalog`
+    handoff on `main`; the sender's two non-preferred shapes survived
+    nowhere and are this workstream's reconstruction, flagged as such in the
+    file. One mechanism fact was added from the tree: the inside/outside
+    coupling in `devcapsule/container_runtime/contract.py` is already an
+    explicitly versioned contract (`RuntimePlan.version` and
+    `ComponentRuntimeTemplate.version` are written as `1` and refuse any
+    other value), which reframes the question as a missing compatibility
+    policy rather than a missing synchronization mechanism.
+  - **The correction is delivered, not applied.** Restriction 11's carve-out
+    protects `component-catalog`'s handoff, so the two false records were
+    reported to its `intake/` as
+    `2026-09-08-project-management-sync-item-never-arrived.md` rather than
+    edited here.
+- **Observed 2026-09-08, and this one is mechanically checkable.** The
+  pre-commit invariant already designed in
+  [Workflow Invariants As Pre-Commit Hooks](2026-08-29-workflow-invariants-pre-commit.md)
+  checks the intake exclusive-or: every delivered item is either in `intake/`
+  or in the disposition log. That design is not implemented yet, so nothing
+  mechanical ran here — but **the invariant would not have caught this even if
+  it had**: a lost item is in neither place, and nothing knows it was ever
+  supposed to exist. The signal that was actually available is different and
+  cheap — a handoff citing an outbox commit that is not an ancestor of `main`,
+  and an outbox reset discarding commits not reachable from `main`. Offered to
+  the backlog entry as a second, distinct check rather than folded into the
+  first, since they detect different things. Whether it is written before the
+  release candidate is a `workflow-improvements` scheduling question under the
+  freeze, not this workstream's to settle.
 
 ## Intake Dispositions
 
@@ -435,6 +487,56 @@ eight unowned shortcomings and seven documented items to pin to V1; and the
 [first portfolio checkpoint](2026-08-15-portfolio-checkpoint.md).
 
 ## Next Resumable Task
+
+**Session 2026-09-08: eight intake items are pending and one of them was
+recovered from a failed delivery.** What this session did, and what is left:
+
+- Done: the lost `one-devcapsule-inside-and-outside` item is reconstructed
+  into `intake/` (see *Current State*), and the correction `component-catalog`
+  must make to its own two records is written to its `intake/` as
+  `2026-09-08-project-management-sync-item-never-arrived.md`. Both await this
+  branch's pull request; the correction additionally needs this workstream's
+  outbox, since it is delivery to another workstream on `main`.
+- **Not done, and deliberately: none of the eight pending items is
+  dispositioned.** Every row in the disposition log names the product owner
+  as the decider, and the sync item in particular decides whether the matrix
+  keeps pinning base digests at all. The analysis is prepared; the ruling is
+  the owner's.
+- The eight pending items, in the order they are worth taking:
+  1. **`one-devcapsule-inside-and-outside`** — the reframing to settle first,
+     since the recovered item shows the contract is already versioned and the
+     gap is a compatibility policy. It gates `component-catalog`'s resume,
+     whose handoff forbids starting any of the three shapes without this
+     disposition.
+  2. **`release-candidate-concept`** — composes with it: the candidate stage
+     decides whether a base release and a CLI release are one act or two,
+     which is what shape 1 changes.
+  3. **`internal-naming-drops-generation-vocabulary`** — note before ruling
+     that its points 1 and 2 are already *executed*: `component-catalog`
+     retired v026, added the `postgresql-client` entry, and renamed
+     `substrate` to `base_family` with the single family `ubuntu-24.04`
+     (matrix `embedded-16`, D-0007's second 2026-09-06 amendment). What is
+     genuinely open is point 3, the commit/record house style, and where it
+     is written down.
+  4. **`matrix-learns-from-experiments`** — named by the release-candidate
+     item as the source of its promotion rule ("a candidate becomes a release
+     when every combination it pins has a claim of a successful run"), so it
+     is read together with item 2 rather than separately.
+  5. **`upgrade-experience-as-a-v1-feature`** (2026-09-03),
+     **`automated-component-version-validation-research`** (2026-09-04),
+     **`init-regenerate-versus-config-semantics`**, and **`development-blog`**
+     — the remaining arrivals, unread this session. Note that
+     `init-regenerate-versus-config` already carries an owner decision (leave
+     `init` as is for now; settle the semantics here) and that
+     `component-catalog` fixed one of its five points in `eb395fa` without
+     waiting, so its disposition starts from four.
+- Also for the owner, observed not acted on: `component-catalog/outbox` at
+  `47b4442` is unmerged, so `main`'s registry still shows that workstream as
+  active with the 0.2.10 walk mid-flight rather than paused with it complete;
+  and `main` still declares version 0.2.10 after the tag, so a PEX built from
+  `main` would be mislabeled.
+
+The standing coordination work below is unchanged by this session.
 
 **All four questions of the 2026-08-27 pause are settled** (see *Last Task
 And Status*). The next resumable coordination work, in order of leverage:
