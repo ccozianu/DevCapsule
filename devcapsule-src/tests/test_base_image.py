@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from email.message import Message
 from pathlib import Path
@@ -49,7 +48,7 @@ def pex_fixture(
     return path
 
 
-def test_base_image_packages_pex_with_generic_runtime_configuration(tmp_path: Path) -> None:
+def test_base_image_exports_independent_tooling_without_runtime(tmp_path: Path) -> None:
     pex = pex_fixture(tmp_path / "devcapsule.pex")
     options = BaseImageBuildOptions(pex, "test-base:latest", source_revision="a" * 40)
 
@@ -85,14 +84,15 @@ def test_base_image_packages_pex_with_generic_runtime_configuration(tmp_path: Pa
     assert ("devcapsule.image.kind", "base") in plan.labels
     assert ("devcapsule.image.canonical-name", "test-base:latest") in plan.labels
     assert ("devcapsule.base.recipe", "ubuntu-24.04") in plan.labels
-    assert ("devcapsule.base.recipe-version", "6") in plan.labels
+    assert ("devcapsule.base.recipe-version", "7") in plan.labels
     # Recipe 5 adds the redistributable PostgreSQL client so projects can
     # declare the postgresql-client component instead of acquiring a client.
     assert "postgresql-client" in plan.apt_packages
     assert ("devcapsule.component.postgresql-client.license", "PostgreSQL") in plan.labels
     assert ("devcapsule.base.recipe-status", "ready") in plan.labels
-    assert ("devcapsule.pex.sha256", hashlib.sha256(pex.read_bytes()).hexdigest()) in plan.labels
-    assert ("devcapsule.pex.build-mnemonic", "v026") in plan.labels
+    assert not plan.files
+    assert ("devcapsule.base.runtime", "launcher-supplied") in plan.labels
+    assert not any(key.startswith("devcapsule.pex.") for key, _value in plan.labels)
     assert ("devcapsule.source.repository", "https://github.com/example/devcapsule") in plan.labels
     assert ("devcapsule.source.revision", "a" * 40) in plan.labels
     assert (
@@ -206,7 +206,7 @@ def test_base_image_allows_explicit_local_source_escape_hatch(tmp_path: Path) ->
     plan = build_base_image_spec(BaseImageBuildOptions(pex, allow_local_source=True)).build_plan()
 
     assert ("devcapsule.source.revision", "unknown") in plan.labels
-    assert ("devcapsule.pex.build-mnemonic", "local-v026") in plan.labels
+    assert ("org.opencontainers.image.version", "local-v026") in plan.labels
 
 
 def test_base_image_local_source_escape_hatch_skips_public_verification(tmp_path: Path) -> None:

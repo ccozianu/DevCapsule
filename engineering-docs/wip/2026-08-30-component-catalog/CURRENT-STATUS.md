@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: open; first session started 2026-08-30
+State: active 2026-09-08; owner-authorized v0.2.11 release simplification and component build reuse
 
 Integration target: `main`
 
@@ -12,6 +12,51 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Next Resumable Task
+
+The owner resumed this branch on 2026-09-08 and explicitly authorized the
+release simplification discussed here, adding independent component-install
+reuse to the v0.2.11 target. This direct instruction supersedes the previous
+wait for project-management's runtime-delivery disposition for this slice; no
+other workstream's records are edited or its queued design items dispositioned.
+
+Implementation on this branch: tag-derived release package versions; draft,
+verify, publish workflow with retained/reused assets and a release manifest;
+launcher PEX delivery identified by SHA-256 in the formation; runtime-free
+base recipe 7; independent BuildKit contribution stages for tools, IDEs and
+agents, assembled with COPY --link --from. v0.2.11 reuses the pinned v0.2.10
+base; publishing a replacement base is not a prerequisite. Existing project
+locks and sample branches are unchanged.
+
+Validation: full Nox build passed (556 unit tests, one existing xfail, mypy,
+source and PEX smokes, 8 packaging integration tests). The tag test builds
+v98.7.6 from a source baseline of 0.2.10, verifies both installed metadata and
+build identity, and checks source remains unchanged. Docker tests proved cache
+reuse/invalidation, exact launcher delivery to both surface fixtures on Ubuntu,
+and runtime sessions against the existing v0.2.10 base. Actionlint 1.7.12 and
+`git diff --check` passed. Runtime metadata now overrides inherited base PEX
+labels with the copied runtime's actual identity.
+
+Delivery checkpoint: implementation commit `e6e0808` is pushed on
+`component-catalog/antigravity-cli`. GitHub connector PR creation returned HTTP
+403, "Resource not accessible by integration"; no alternate CLI login is
+configured. **No PR was created.** Open it from
+https://github.com/ccozianu/devcapsule/compare/main...component-catalog/antigravity-cli?expand=1
+or restore the connector's pull-request write access. Then obtain the owner
+acceptance required by *Integration Cadence* and merge. After integration the owner can apply
+v0.2.11 to current remote mainline; no separate version bump or base repin is
+needed. The review artifact is `devcapsule-src/dist/devcapsule.pex`, built with
+verified public source revision `e6e08083f05f2540a9b950b9b3cf3672e9a100e0`.
+It reports the local baseline mnemonic v0.2.10-local-linux-x86_64; the final
+v0.2.11 tag supplies the released package version. The earlier local validation
+artifact is `devcapsule-src/dist/devcapsule-local.pex`.
+
+Open threads for this slice: no real GUI/login smoke is claimed; source-form
+launches require an explicitly selected built PEX; base publication remains a
+separate maintenance operation; a partial GitHub asset upload requires recovery
+from the retained Actions artifact. No release has been tagged or published by
+this session. The prior v0.2.10 smoke questions below remain unanswered.
 
 ## Goal
 
@@ -489,7 +534,33 @@ generation holds identical content — success is the only writer, so every
 entry is safe to restore by hand-copy. A guided `config history`/
 `restore` command surface is recorded follow-on work in the decision.
 
-## Next Resumable Task
+## Previous Resume Checkpoint (2026-09-07)
+
+**Paused 2026-09-07 by the product owner; everything committed, PR #61
+(repin, v0.2.9 pin retirement, sync-thread record) and the outbox
+(intake `one-devcapsule-inside-and-outside`) merged to `main`; working
+tree clean.** The 0.2.10 walk is complete: release tagged and
+published, base rebuilt from the released PEX, 0.2.9 withdrawn and its
+pin retired. On resume, in this order:
+
+1. **Re-verify external state**: `main` is at or past the #61 merge
+   (`1fb34c2`); Docker Hub serves `v0.2.10` at digest `4bb691b5…56bf9c`
+   and no `v0.2.9` tag; the git tag `v0.2.9` (`f2c6818`) exists unless
+   the owner deleted it.
+2. **Ask the owner** whether the smoke of the rebuilt v0.2.10 base ran
+   (dogfood, tictactoe); it is the evidence for converting the
+   provisional entries in item 2 of the earlier list below.
+3. **Version on `main`**: `main` still says 0.2.10 after the tag, so a
+   PEX built from it would be mislabeled; the bump to the next version
+   is the owner's call and has not been made.
+4. **Project-management intake awaiting disposition** (sent by this
+   workstream, not this workstream's to act on): the release-candidate
+   concept, internal naming, and the inside-versus-outside sync
+   decision, whose outcome decides whether the matrix keeps pinning
+   base digests at all. Do not start any of the three shapes here
+   without that disposition.
+
+The 2026-09-06 evening resume note follows for the record.
 
 **Resumed 2026-09-06 evening inside the dogfood capsule on v0.2.10;
 the repin to the rebuilt base is committed and pushed, working tree

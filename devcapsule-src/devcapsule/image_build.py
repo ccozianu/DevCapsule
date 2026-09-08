@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import tarfile
 import tempfile
@@ -37,6 +38,20 @@ class FileCopy:
 
 
 @dataclass(frozen=True)
+class ImageCopy:
+    image: str
+    source: str
+    destination: str
+
+
+@dataclass(frozen=True)
+class BuildStage:
+    name: str
+    plan: ImageBuildPlan
+    exports: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ImageBuildPlan:
     base_image: str
     image: str
@@ -48,6 +63,8 @@ class ImageBuildPlan:
     exec_steps: tuple[ExecStep, ...] = ()
     entrypoint: tuple[str, ...] = ()
     command: tuple[str, ...] = ()
+    stages: tuple[BuildStage, ...] = ()
+    image_copies: tuple[ImageCopy, ...] = ()
 
     def add_apt_packages(self, *packages: str) -> ImageBuildPlan:
         return replace(self, apt_packages=self.apt_packages + tuple(packages))
@@ -157,6 +174,39 @@ class CommandComponent:
 
 
 @dataclass(frozen=True)
+class ImageCopyComponent:
+    image: str
+    source: str
+    destination: str
+
+    def apply(self, plan: ImageBuildPlan) -> ImageBuildPlan:
+        return replace(plan, image_copies=plan.image_copies + (
+            ImageCopy(self.image, self.source, self.destination),
+        ))
+
+
+@dataclass(frozen=True)
+class ContributionComponent:
+    """An independently cached installation with explicit filesystem exports.
+
+    BuildKit keys each stage on its parent, commands and copied inputs. Neither
+    another contribution nor the final image's name/metadata enters that key.
+    Environment variables belong to the consuming image, not the export.
+    """
+
+    name: str
+    components: tuple[BuildComponent, ...]
+    exports: tuple[str, ...]
+    base_image: str = "devcapsule-baseline"
+
+    def apply(self, plan: ImageBuildPlan) -> ImageBuildPlan:
+        contribution = ImageBuildSpec(self.name, self.base_image, self.components).build_plan()
+        return replace(plan, stages=plan.stages + (
+            BuildStage(self.name, contribution, self.exports),
+        ))
+
+
+@dataclass(frozen=True)
 class ImageBuildSpec:
     image: str
     base_image: str
@@ -210,7 +260,35 @@ class BuildxImageBuilder:
 
 
 def render_build_context(plan: ImageBuildPlan, context_root: Path) -> Path:
-    dockerfile_lines = [f"FROM {plan.base_image}"]
+    context_root.mkdir(parents=True, exist_ok=True)
+    dockerfile_lines: list[str] = []
+    if plan.stages:
+        dockerfile_lines.append("# syntax=docker/dockerfile:1")
+        baseline = ImageBuildPlan(plan.base_image, "", apt_packages=plan.apt_packages)
+        dockerfile_lines.extend(_render_stage(baseline, context_root, "devcapsule-baseline"))
+        names = {"devcapsule-baseline"}
+        for stage in plan.stages:
+            if not re.fullmatch(r"[a-z][a-z0-9-]*", stage.name) or stage.name in names:
+                raise ValueError(f"Invalid or repeated contribution name: {stage.name!r}")
+            if stage.plan.stages:
+                raise ValueError("Nested contribution stages are not supported")
+            names.add(stage.name)
+            dockerfile_lines.extend(_render_stage(stage.plan, context_root, stage.name))
+        copies = tuple(
+            ImageCopy(stage.name, path, path)
+            for stage in plan.stages for path in stage.exports
+        )
+        plan = replace(plan, base_image="devcapsule-baseline", apt_packages=(),
+                       image_copies=copies + plan.image_copies)
+    dockerfile_lines.extend(_render_stage(plan, context_root))
+    dockerfile_path = context_root / "Dockerfile"
+    dockerfile_path.write_text("\n".join(dockerfile_lines) + "\n", encoding="utf-8")
+    return dockerfile_path
+
+
+def _render_stage(plan: ImageBuildPlan, context_root: Path, name: str = "") -> list[str]:
+    dockerfile_lines = [f"FROM {plan.base_image}" + (f" AS {name}" if name else "")]
+    prefix = f"{name}-" if name else ""
     copy_index = 0
 
     if plan.apt_packages:
@@ -225,14 +303,14 @@ def render_build_context(plan: ImageBuildPlan, context_root: Path) -> Path:
         )
 
     for directory_copy in plan.directories:
-        relative_source = f"copy-dir-{copy_index}"
+        relative_source = f"{prefix}copy-dir-{copy_index}"
         destination = normalize_container_path(directory_copy.destination)
-        shutil.copytree(directory_copy.source, context_root / relative_source, dirs_exist_ok=True)
+        shutil.copytree(directory_copy.source, context_root / relative_source, dirs_exist_ok=True, symlinks=True)
         dockerfile_lines.append(f"COPY {relative_source}/ {destination}/")
         copy_index += 1
 
     for file_copy in plan.files:
-        relative_source = f"copy-file-{copy_index}"
+        relative_source = f"{prefix}copy-file-{copy_index}"
         destination = normalize_container_path(file_copy.destination)
         destination_parent = Path(destination).parent.as_posix()
         shutil.copy2(file_copy.source, context_root / relative_source)
@@ -241,6 +319,11 @@ def render_build_context(plan: ImageBuildPlan, context_root: Path) -> Path:
         if file_copy.permissions is not None:
             dockerfile_lines.append(f"RUN chmod {file_copy.permissions:o} {shell_quote(destination)}")
         copy_index += 1
+
+    for copy in plan.image_copies:
+        source = normalize_container_path(copy.source)
+        destination = normalize_container_path(copy.destination)
+        dockerfile_lines.append(f"COPY --link --from={copy.image} {source} {destination}")
 
     for step in plan.exec_steps:
         dockerfile_lines.append(f"RUN {shell_join(step.args)}")
@@ -253,9 +336,7 @@ def render_build_context(plan: ImageBuildPlan, context_root: Path) -> Path:
     if plan.command:
         dockerfile_lines.append(f"CMD {json.dumps(list(plan.command))}")
 
-    dockerfile_path = context_root / "Dockerfile"
-    dockerfile_path.write_text("\n".join(dockerfile_lines) + "\n", encoding="utf-8")
-    return dockerfile_path
+    return dockerfile_lines
 
 
 def normalize_container_path(path: str) -> str:

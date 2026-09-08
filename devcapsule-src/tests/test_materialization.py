@@ -179,7 +179,7 @@ def test_codium_materialization_builds_an_image_with_no_setuid_binary(tmp_path: 
 
     def build(build_spec) -> None:
         plan = build_spec.build_plan()
-        assert any(copy.destination == "/opt/codium" for copy in plan.directories)
+        assert any(copy.destination == "/opt/codium" for stage in plan.stages for copy in stage.plan.directories)
         assert plan.exec_steps == ()
         labels = dict(plan.labels)
         assert labels["devcapsule.component.id"] == "codium"
@@ -345,7 +345,7 @@ def test_materialization_builds_from_verified_archive_and_rechecks_result(tmp_pa
         labels = dict(plan.labels)
         built[plan.image] = image_details(plan.image, labels)
         assert plan.base_image == "base:debug"
-        assert any(copy.destination == "/opt/jetbrains/pycharm" for copy in plan.directories)
+        assert any(copy.destination == "/opt/jetbrains/pycharm" for stage in plan.stages for copy in stage.plan.directories)
         assert any(copy.destination == "/etc/devcapsule/component-runtime-template.json" for copy in plan.files)
         assert not any(copy.destination == "/etc/devcapsule/runtime-plan.json" for copy in plan.files)
 
@@ -384,7 +384,7 @@ def test_materialization_extracts_a_locked_archive_member(tmp_path: Path) -> Non
     def build(build_spec) -> None:
         plan = build_spec.build_plan()
         copied = next(
-            copy for copy in plan.files if copy.destination == "/opt/antigravity-cli/bin/antigravity"
+            copy for stage in plan.stages for copy in stage.plan.files if copy.destination == "/opt/antigravity-cli/bin/antigravity"
         )
         assert copied.source.read_bytes() == b"tool-binary-fixture"
         assert copied.permissions == 0o755
@@ -455,7 +455,7 @@ def test_materialization_installs_npm_packages_with_npm_offline(tmp_path: Path) 
 
     def build(build_spec) -> None:
         plan = build_spec.build_plan()
-        copies = {copy.destination: copy for copy in plan.files}
+        copies = {copy.destination: copy for stage in plan.stages for copy in stage.plan.files}
         # The verified tarballs travel whole, named as npm published them,
         # beside a manifest that declares each as a file: dependency.
         assert copies["/opt/codex/0.153.0/codex-0.153.0.tgz"].source.read_bytes() == (
@@ -477,7 +477,7 @@ def test_materialization_installs_npm_packages_with_npm_offline(tmp_path: Path) 
         }
         # One offline install per project, after every copy, with the cache
         # scrubbed in the same step; the launcher directory joins PATH.
-        assert plan.exec_steps == (ExecStep(npm_install_step("/opt/codex/0.153.0")),)
+        assert next(stage.plan for stage in plan.stages if stage.name == "codex").exec_steps == (ExecStep(npm_install_step("/opt/codex/0.153.0")),)
         assert npm_install_step("/opt/codex/0.153.0") == (
             "sh",
             "-c",
@@ -611,7 +611,7 @@ def test_materialization_installs_locked_raw_executable_and_image_environment(
     def build(build_spec) -> None:
         plan = build_spec.build_plan()
         copied = next(
-            item for item in plan.files if item.destination == "/opt/claude/bin/claude"
+            item for stage in plan.stages for item in stage.plan.files if item.destination == "/opt/claude/bin/claude"
         )
         assert copied.source.read_bytes() == b"claude-code-binary-fixture"
         assert copied.permissions == 0o755

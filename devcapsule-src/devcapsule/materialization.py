@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 from devcapsule.compat import CliError
+from devcapsule.build_info import read_pex_build_info
 from devcapsule.platforms import XdgHomes
 from devcapsule.components.catalog import (
     ComponentCatalogError,
@@ -27,6 +28,7 @@ from devcapsule.components import LockedArtifactDeclaration
 from devcapsule.components.catalog import INTERACTIVE_SURFACES
 from devcapsule.image_build import (
     CommandComponent,
+    ContributionComponent,
     DirectoryComponent,
     EntrypointComponent,
     EnvComponent,
@@ -234,6 +236,7 @@ def formation_descriptor(
     recipe_id: str = MATERIALIZATION_RECIPE_ID,
     recipe_version: str = MATERIALIZATION_RECIPE_VERSION,
     component_id: str = "pycharm",
+    runtime_sha256: str | None = None,
 ) -> dict[str, Any]:
     operating_system, architecture = _split_platform(platform)
     profile = surface_profile(component_id)
@@ -286,6 +289,8 @@ def formation_descriptor(
             "parameters": {"installation-path": profile.installation_path},
         },
         "runtime": {
+            **({"pex-sha256": _validated_sha256(runtime_sha256, "Runtime PEX SHA-256")}
+               if runtime_sha256 is not None else {}),
             "component-template-sha256": template_digest,
             "entrypoint": list(ENTRYPOINT_CONTRACT),
             "command": [RUNTIME_PLAN_PATH],
@@ -429,6 +434,7 @@ def surface_materialization_spec(
     recipe_id: str = MATERIALIZATION_RECIPE_ID,
     recipe_version: str = MATERIALIZATION_RECIPE_VERSION,
     component_id: str = "pycharm",
+    runtime_pex: Path | None = None,
 ) -> ImageBuildSpec:
     profile = surface_profile(component_id)
     descriptor = formation_descriptor(
@@ -439,39 +445,42 @@ def surface_materialization_spec(
         recipe_id=recipe_id,
         recipe_version=recipe_version,
         component_id=component_id,
+        runtime_sha256=sha256_file(runtime_pex) if runtime_pex is not None else None,
     )
     identity = formation_identity(descriptor)
     environment = _ancillary_environment(
         tuple(declaration for _path, declaration in ancillary_files)
     )
+    runtime_labels: tuple[tuple[str, str], ...] = ()
+    if runtime_pex is not None:
+        info = read_pex_build_info(runtime_pex)
+        runtime_labels = (
+            ("devcapsule.pex.sha256", descriptor["runtime"]["pex-sha256"]),
+            ("devcapsule.pex.build-mnemonic", info.build_mnemonic),
+            ("devcapsule.source.repository", info.source_repository),
+            ("devcapsule.source.revision", info.source_revision),
+            ("devcapsule.source.url", info.source_url),
+            ("org.opencontainers.image.source", info.source_repository),
+            ("org.opencontainers.image.revision", info.source_revision),
+            ("org.opencontainers.image.version", info.build_mnemonic),
+        )
     return ImageBuildSpec(
         image=image,
         base_image=base_reference,
         components=(
-            DirectoryComponent(surface_root, profile.installation_path),
-            *profile.post_install,
+            ContributionComponent(
+                component_id,
+                (DirectoryComponent(surface_root, profile.installation_path), *profile.post_install),
+                (profile.installation_path,),
+            ),
             FileComponent(component_template, COMPONENT_TEMPLATE_PATH, permissions=0o644),
-            *(
-                FileComponent(
-                    path, _artifact_image_path(declaration), permissions=declaration.permissions
-                )
-                for path, declaration in ancillary_files
-            ),
-            # Each npm project: its manifest beside the copied tarballs, then
-            # the offline install. The plan renders every file copy before
-            # any exec step, so the install always sees its inputs.
-            *(
-                FileComponent(
-                    project.package_json, f"{project.destination}/package.json", permissions=0o644
-                )
-                for project in npm_projects
-            ),
-            *(
-                ExecComponent(npm_install_step(project.destination)) for project in npm_projects
-            ),
+            *_ancillary_contributions(ancillary_files, npm_projects),
+            *((FileComponent(runtime_pex, "/opt/devcapsule/bin/devcapsule.pex", permissions=0o755),)
+              if runtime_pex is not None else ()),
             *( (EnvComponent(environment),) if environment else () ),
             LabelComponent(
                 managed_labels(MATERIALIZED_KIND, image)
+                + runtime_labels
                 + (
                     ("devcapsule.materialization.descriptor", canonical_json(descriptor)),
                     ("devcapsule.materialization.identity", identity),
@@ -540,6 +549,7 @@ def ensure_materialized_surface(
     component_id: str = "pycharm",
     report: Callable[[str], None] | None = None,
     list_formations: Callable[[], tuple[ImageDetails, ...]] | None = None,
+    runtime_pex: Path | None = None,
 ) -> tuple[str, bool]:
     profile = surface_profile(component_id)
     descriptor = formation_descriptor(
@@ -550,6 +560,7 @@ def ensure_materialized_surface(
         recipe_id=recipe_id,
         recipe_version=recipe_version,
         component_id=component_id,
+        runtime_sha256=sha256_file(runtime_pex) if runtime_pex is not None else None,
     )
     image = canonical_image_name(descriptor, component_id)
     identity = formation_identity(descriptor)
@@ -642,6 +653,7 @@ def ensure_materialized_surface(
                     recipe_id=recipe_id,
                     recipe_version=recipe_version,
                     component_id=component_id,
+                    runtime_pex=runtime_pex,
                 )
             )
         completed = inspect_image(image)
@@ -802,6 +814,28 @@ class NpmProject:
     component_id: str
     destination: str
     package_json: Path
+
+
+def _ancillary_contributions(
+    files: tuple[tuple[Path, LockedArtifactDeclaration], ...],
+    projects: tuple[NpmProject, ...],
+) -> tuple[ContributionComponent, ...]:
+    contributions = []
+    for component_id in sorted({item.component_id for _path, item in files}):
+        selected = [(path, item) for path, item in files if item.component_id == component_id]
+        npm = [project for project in projects if project.component_id == component_id]
+        contributions.append(ContributionComponent(
+            component_id,
+            (
+                *(FileComponent(path, _artifact_image_path(item), permissions=item.permissions)
+                  for path, item in selected),
+                *(FileComponent(project.package_json, f"{project.destination}/package.json", permissions=0o644)
+                  for project in npm),
+                *(ExecComponent(npm_install_step(project.destination)) for project in npm),
+            ),
+            tuple(sorted({item.destination for _path, item in selected})),
+        ))
+    return tuple(contributions)
 
 
 def npm_install_step(destination: str) -> tuple[str, ...]:
@@ -992,6 +1026,8 @@ def _verify_materialized_labels(
         or labels.get(CANONICAL_NAME_LABEL) != canonical_name
         or labels.get("devcapsule.materialization.identity") != expected_identity
         or labels.get("devcapsule.materialization.base-identity") != descriptor["base"]["identity"]
+        or ("pex-sha256" in descriptor["runtime"]
+            and labels.get("devcapsule.pex.sha256") != descriptor["runtime"]["pex-sha256"])
         or labels.get("devcapsule.materialization.recipe-version") != descriptor["recipe"]["version"]
         or labels.get("devcapsule.component.id") != descriptor["components"][0]["id"]
         or labels.get("devcapsule.component.version") != descriptor["components"][0]["version"]
