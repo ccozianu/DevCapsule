@@ -188,7 +188,11 @@ jobs:
             # by semantic version so an older maintenance release cannot displace it.
             latest=legacy
             if [ "$RELEASE_PRERELEASE" = true ]; then latest=false; fi
-            release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq .id)"
+            # The by-tag REST endpoint excludes drafts; list releases with the
+            # authenticated token to obtain the staged release's numeric ID.
+            release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .id")"
+            [[ "$release_id" =~ ^[0-9]+$ ]]
             gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
               -F draft=false -F prerelease="$RELEASE_PRERELEASE" -f make_latest="$latest" >/dev/null
           fi

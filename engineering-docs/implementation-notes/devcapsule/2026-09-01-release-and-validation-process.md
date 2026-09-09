@@ -1,47 +1,109 @@
 # DevCapsule Release And Validation Process
 
-Originally recorded 2026-09-01. Revised for the owner's 2026-09-08 direction:
-a version tag on mainline is the only ordinary release action; component
-installations are reused across image builds.
+Originally recorded 2026-09-01. Revised for the owner's 2026-09-09 direction:
+stage and validate immutable release candidates away from main, then promote
+accepted source after main integration or a scoped engineering exception.
+Component installations are reused across image builds.
 
 ## Release Identity And Trigger
 
-After the content has landed on `main`, push `vMAJOR.MINOR.PATCH` at the desired
-mainline commit. `.github/workflows/release-pex.yml` checks the exact tag and
-requires its commit to appear in `main`'s first-parent history. It does not
-require the commit to remain the tip while the release runs.
+Prepare a release on `release-MAJOR.MINOR.PATCH` and push an immutable candidate
+tag such as `v0.2.11-rc1` at the prepared commit. A patch can start from the prior
+release tag rather than current main. `release-*` refs are durable release
+anchors, separate from workstream selection; the owner authorized this distinction
+on 2026-09-09 and sent its general workflow rules to workflow-improvements.
 
-The tag supplies the package version. `scripts/build-pex.sh` stamps both the
-package metadata and `_build_info.json` in its temporary build directory. The
-tagged source is unchanged: there is no bump PR, repin commit, or follow-up
-version commit. `pyproject.toml` remains the fallback version for source/local
-builds; `nox -s bump` is optional maintenance of that baseline, not a release
-step. Local mnemonics retain `-local` and official mnemonics equal the tag.
+```text
+git branch release-0.2.11 HEAD
+git tag -a v0.2.11-rc0 -m 'DevCapsule 0.2.11 candidate 0'
+git push --atomic origin release-0.2.11 v0.2.11-rc0
+```
 
-## Automated Release
+Use a new commit and RC number for fixes, advance the release branch, and keep
+previous tags unchanged. `.github/workflows/release-pex.yml` requires the tag's
+commit to belong to the matching release branch. Candidates do not require main
+integration. Main stays open; do not rebase tested release source onto it.
+
+The tag supplies the package version. `scripts/build-pex.sh` stamps package
+metadata and `_build_info.json` in a temporary directory: `v0.2.11-rc1` becomes
+`0.2.11rc1`, and `v0.2.11` becomes `0.2.11`. No version-bump commit is needed.
+The source version remains the local-build baseline.
+
+## Automated Candidate Release
 
 The tag workflow:
 
-1. Verifies source identity, runs syntax checks, unit tests and mypy.
-2. Recovers the exact assets of an existing draft or published release, or
-   builds the self-contained PEX once when no release has been staged.
-3. Records the source revision, tag-derived version, selected base references
-   and PEX checksum in `release-manifest.json`.
-4. Runs packaging integration tests and the clean-machine proof with no Python
-   or networking, plus Docker checks for component-install reuse and exact
-   launcher delivery into both surface families, then pulls each selected base
-   by digest and exercises runtime sessions against it. These use fixture IDEs;
-   they do not claim a real GUI or authenticated provider smoke.
-5. Retains build artifacts, creates a draft release with notes and checksums,
-   downloads and compares the staged bytes, and proves the downloaded PEX.
-6. Publishes the complete draft. A rerun verifies and tests staged bytes;
-   it does not replace a published artifact with a fresh rebuild.
+1. Verifies the tag/branch identity, runs syntax checks, unit tests and mypy.
+2. Recovers exact existing assets, or builds the self-contained PEX.
+3. Records source identity, base digests, checksum, build-input hashes, dependency
+   distribution fingerprints and the embedded Python fingerprint in the manifest.
+4. Runs packaging integration tests, a clean-machine proof with no Python or
+   networking, Docker component-install reuse and exact launcher delivery tests
+   for both surface families, and runtime-session tests on each pinned base.
+   Fixture IDEs do not claim real GUI or authenticated provider smoke.
+5. Retains build artifacts, creates a draft release, downloads and compares its
+   bytes, and repeats the clean-machine proof against the download.
+6. Publishes candidates as GitHub prereleases with Latest disabled.
 
-An incomplete or inconsistent existing asset set fails explicitly rather than
-silently overwriting it. The Actions artifact retains the completed build for
-recovery from a partial upload. A source defect requires a new commit and tag;
-published tags and assets must never be moved or replaced. Tag creation does
-not require a second manual publication approval.
+An incomplete or inconsistent staged asset set fails explicitly. Recover partial
+uploads from the retained Actions artifact. Reruns verify and test the existing
+bytes; they never replace published candidate assets or move tags.
+
+## Acceptance And Final Promotion
+
+Accept an exact candidate's checksum and source commit with smoke/E2E evidence.
+Generate the reviewable record on the integration side:
+
+```text
+cd devcapsule-src
+.venv/bin/python scripts/prepare-promotion.py v0.2.11-rc1 \
+  --baseline FULL_PREPARATION_BASE_SHA --accepted-by OPERATOR \
+  --evidence 'Exact candidate smoke result and Actions run URL'
+```
+
+The helper downloads and checksum-verifies the candidate and creates
+`engineering-docs/releases/v0.2.11.json`. It does not perform or invent smoke
+acceptance. Commit the record and integrate the candidate through normal PR
+delivery. Keep the release branch and accepted tag at their tested source commit;
+main can additionally contain the acceptance record and unrelated development.
+
+The record has schema version 1, `tag`, `candidate-tag`, `source-revision`,
+`candidate-sha256`, `accepted-by`, a nonempty `evidence` list, and `integration`:
+
+- `ancestry` (helper default): `baseline` identifies the preparation base; the
+  accepted candidate must be an ancestor of main, including ordinary merge commits.
+- `reviewed`: additionally supply `main-commits` (full SHAs), `reviewed-by`,
+  `rationale`, and `covers-release-delta: true`. Every referenced commit must be
+  reachable from main. The reviewed assertion covers the entire baseline-to-RC
+  delta, including adaptations in a cherry-pick or squash; patch IDs alone do
+  not establish that claim.
+- `exception`: additionally supply `authorized-by`, `rationale`,
+  `forward-port-owner`, and `follow-up`. This is a scoped authorization in a
+  reviewed engineering record, not a boolean bypass. Baseline still applies.
+
+After the record and integration reach main:
+
+```text
+git tag -a v0.2.11 'v0.2.11-rc1^{commit}' -m 'DevCapsule 0.2.11'
+git push origin v0.2.11
+```
+
+The backend checks release-branch membership, reads the record from a captured
+main revision, validates acceptance/integration, downloads the published candidate
+and verifies its checksum, then builds final-version bytes from exactly the same
+source SHA. It compares base, dependency and Python fingerprints with the candidate
+and reruns all automated gates before final publication. The final manifest embeds
+the record and its main revision. Later main commits do not invalidate retries if
+the accepted record remains unchanged. Final publication uses GitHub's legacy
+Latest selection, which considers semantic version; candidates explicitly disable
+Latest. Tagging is the publication trigger and needs no second approval prompt.
+
+This is source promotion with a final packaging build, not byte-for-byte PEX
+promotion: version metadata changes intentionally. A new source fix requires a
+new candidate. Neither a broken main nor unrelated main changes require bringing
+that work into a maintenance release. The initial implementation automates each
+tag's backend and promotion checks; acceptance, normal PR integration, and the
+final tag remain operator/agent steps.
 
 ## Runtime Delivery And Base Lifecycle
 

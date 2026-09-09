@@ -46,8 +46,21 @@ failed before publication: early-exiting grep caused cut's SIGPIPE under pipefai
 falsely rejecting a public revision. The fix drains the pipeline; packaging tests
 now advertise 500 refs and use annotated release tags. Inspection also found and
 fixed the clean-machine test's source-baseline version assumption. Next candidate
-is `v0.2.11-rc1`; RC0 stays unchanged. Preparation baseline is
+was `v0.2.11-rc1`; RC0 stays unchanged. Preparation baseline is
 `3f028eeb97d7de6bce5b9f2ac2faf0a1b940cb61`.
+
+RC1 at `59d84f04bb54398d74e5e6972352517af9098b7d` passed every automated gate,
+including both downloaded-byte verification and the downloaded PEX proof, in
+[run 34332492934](https://github.com/ccozianu/devcapsule/actions/runs/34332492934).
+Publication then failed because GitHub's REST by-tag lookup excludes drafts.
+The complete RC1 assets remain staged as a draft; no stable release was exposed.
+The fix locates the draft's ID through authenticated release listing, which the
+recovery step already uses. Next candidate is RC2; tags remain immutable. The
+permanent release guide is also brought up to date in this candidate.
+Local validation additionally passed all five Docker tests and an actual RC1
+clean-machine proof. A temporary-repository promotion dry run verified rejection
+without a main acceptance record and acceptance after integration at unchanged
+candidate SHA. No real GUI/login smoke or final release is claimed.
 
 ## Previous Implementation Checkpoint (2026-09-08)
 

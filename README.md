@@ -91,7 +91,7 @@ cherry-pick/squash evidence, or a scoped exception). It builds final-version byt
 checks frozen dependencies against the candidate, and repeats all release gates.
 The checked-in package version remains the local-build baseline.
 
-The [release protocol](engineering-docs/wip/2026-08-30-component-catalog/release-candidates-proposal.md)
+The [release protocol](engineering-docs/implementation-notes/devcapsule/2026-09-01-release-and-validation-process.md)
 describes the record, maintenance releases, and exact operator commands. A future
 patch starts from the previous release tag even when main is not shippable.
 Retries verify and reuse staged assets; candidate tags and published assets stay
