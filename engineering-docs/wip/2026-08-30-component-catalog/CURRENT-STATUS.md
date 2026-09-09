@@ -62,6 +62,13 @@ clean-machine proof. A temporary-repository promotion dry run verified rejection
 without a main acceptance record and acceptance after integration at unchanged
 candidate SHA. No real GUI/login smoke or final release is claimed.
 
+RC2 was pushed at `8e6f33128a929c354b8fb36e64977fbac09a7bc1`. Final review
+found the packaging backend still used floating setuptools/wheel build-system
+requirements. Pinning the already validated versions (84.0.0 and 0.47.0) makes
+those packaging inputs stable across candidate/final builds as required by the
+accepted contract. RC3 will carry that fix; the RC2 run is retained as additional
+publication-path evidence, not the candidate chosen for final promotion.
+
 ## Previous Implementation Checkpoint (2026-09-08)
 
 The owner resumed this branch on 2026-09-08 and explicitly authorized the
