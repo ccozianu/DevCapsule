@@ -252,7 +252,8 @@ chmod 0755 devcapsule.pex
 ./devcapsule.pex version --json
 ```
 
-To run the existing Docker E2E smoke suite against a published executable:
+To build a full candidate base and run the Docker E2E smoke suite using a
+published executable:
 
 ```bash
 cd devcapsule-src # from the repository root
@@ -267,10 +268,27 @@ done
 chmod 0755 "$release_dir/devcapsule.pex"
 DEVCAPSULE_PEX_UNDER_TEST="$release_dir/devcapsule.pex" \
 DEVCAPSULE_EXPECTED_BUILD_MNEMONIC="$release_tag" \
-  .venv/bin/python -m nox -s e2e
+  .venv/bin/python -m nox -s e2e -- --build-base
 ```
 
-Pull `ubuntu:24.04` and the base reference in the checkout's platform lock before
+Pull `ubuntu:24.04` before running. `--build-base` invokes the selected PEX's
+`images build --type base --recipe ubuntu-24.04` with its public source revision.
+This builds the full OS/toolchain recipe, including the independent Node, Temurin
+and Maven contributions, and retains a local `devcapsule-base-e2e:<candidate>-<id>`
+image for inspection. `dist/e2e-base-build.json` records its tag, immutable image
+ID, builder identity and builder checksum. Runtime tests consume that exact image
+ID (Dockerfile builds use the unique local tag and verify its identity first);
+the extra base test checks installed tools, symlinks, provenance, agent absence
+and the absence of an embedded runtime. This mode runs seven tests.
+
+The build needs dependency-download access. Where Docker bridge DNS is unavailable,
+explicitly select `--build-base --build-network host`; the default remains Docker's
+normal build network. This option affects construction, not the smoke containers'
+network settings.
+
+Omitting `--build-base` runs the six executable-compatibility tests on already
+installed bases; that faster mode does not validate a new full base recipe. Pull
+`ubuntu:24.04` and the base reference in the checkout's platform lock before
 running; the smoke suite requires those images to be available locally. The
 runtime test accepts `DEVCAPSULE_E2E_BASE_IMAGE`, and the removed-container test
 accepts `DEVCAPSULE_EARLY_EXIT_E2E_IMAGE` for explicit base overrides.

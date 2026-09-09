@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; release implementation integrated; downloaded RC3 passed the adapted Docker smoke suite
+State: active 2026-09-09; RC3 built a full recipe-7 base and passed seven Docker smoke tests
 
 Integration target: `main`
 
@@ -12,6 +12,60 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Full Candidate Base Smoke (2026-09-09)
+
+The owner corrected the previous smoke scope: it had tested the RC3 executable
+against an existing base, not built a candidate base. Added `--build-base` to
+`nox -s e2e`, requiring an explicitly selected published PEX. Nox invokes that
+executable's actual `images build --type base --recipe ubuntu-24.04` with its
+embedded public source revision; it does not call the source tree's builder or
+use the fixture's `install_baseline=False` as a substitute for the full recipe.
+
+Validation completed using the existing checksum-verified RC3 download:
+
+```text
+cd devcapsule-src
+DEVCAPSULE_PEX_UNDER_TEST="$PWD/dist/releases/v0.2.11-rc3/devcapsule.pex" \
+  .venv/bin/python -m nox -s e2e -- --build-base --build-network host
+```
+
+Final retained local base:
+`devcapsule-base-e2e:v0.2.11-rc3-3e30c6c81a91`, image ID
+`sha256:90eece0d93ab9c94265efc1ac77b363e4300d345c58761ab58bc31d20667639a`.
+Builder: RC3 source `94e798f1d1a7aaab93ae3e47d9636471448a8e66`, executable SHA-256
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+`dist/e2e-base-build.json` contains the latest local build's identity record.
+This is a locally retained test base, not a Docker Hub publication or a lock repin.
+
+The build executed recipe 7 from Ubuntu 24.04, including OS packages and the
+real Node 22.23.1, Temurin 25.0.4+7 and Maven 3.9.16 contributions. The first
+successful build installed Node in 18.3s, Temurin in 36.1s and Maven in 4.7s;
+Temurin was installed once and copied to both Maven's stage and the final image.
+The final rerun used cached installation stages. BuildKit's existing OS baseline
+cache was reused; this was not claimed as a cold, cache-free build.
+
+Seven Docker tests passed in 114.52s: full-base provenance/tool/agent-absence/
+runtime-absence checks, component cache reuse, both fixture IDE surfaces on the
+new base, unexpected container removal, supervisor sessions, and the separate
+plain-Ubuntu no-Python/no-network proof. Build contexts use the unique owned tag
+and verify its image ID first; Dockerfile FROM cannot use the raw `sha256:` image
+ID spelling. The lifecycle/base inspection paths use the recorded image ID.
+Full Nox build passed: 579 unit tests, one existing xfail, 9 packaging integration
+tests and mypy on 128 files. No real GUI/login smoke is claimed.
+
+Environment finding: the default Docker bridge cannot resolve Ubuntu repositories
+on this host, while an explicit host-network probe succeeds. The stalled default
+build was canceled and the new `--build-network host` option used explicitly.
+It changes the build network only; runtime smoke containers retain their settings.
+An initial full-base smoke exposed the Dockerfile image-ID spelling error, now
+fixed. The earlier successful build is also retained locally at
+`devcapsule-base-e2e:v0.2.11-rc3-8442dbf371f6` for inspection.
+
+**Planned next step:** review/integrate the smoke-harness changes, then continue
+final promotion at the accepted RC3 source commit. Candidate executable/tag and
+release branch remain unchanged. The previous six-case mode remains available
+without `--build-base` and is documented as existing-base compatibility only.
 
 ## Published Executable Smoke Follow-up (2026-09-09)
 
@@ -855,6 +909,12 @@ its ruling thread open):
    of the checkout-local need once it exists.
 
 ## Open Threads
+
+- The full-base coverage correction is complete: RC3's own builder produced a
+  local recipe-7 base and all seven tests passed. Retained image references and
+  exact identity are recorded above. No Docker Hub base publication, lock repin,
+  final release tag or GUI/provider acceptance was performed by this smoke task.
+  Keep the release candidate frozen while reviewing the test harness separately.
 
 - The downloaded-RC3 smoke request is complete: six Docker cases passed and
   the contributor/recursive source paths were explicitly excluded in executable

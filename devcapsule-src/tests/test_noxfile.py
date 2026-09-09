@@ -145,6 +145,7 @@ def test_e2e_uses_selected_release_without_building_local_pex(tmp_path: Path) ->
     executable.touch()
     session = Mock()
     session.env = {}
+    session.posargs = []
     session.run.return_value = json.dumps({"version": "0.2.11rc3", "build_mnemonic": "v0.2.11-rc3", "source_revision": "a" * 40})
     with patch.dict(os.environ, {noxfile.PEX_UNDER_TEST_ENV: str(executable)}, clear=True), \
             patch.object(noxfile, "install_locked"), patch.object(noxfile, "build_test_pex") as build:
@@ -159,6 +160,7 @@ def test_e2e_uses_selected_release_without_building_local_pex(tmp_path: Path) ->
 def test_e2e_retains_local_build_when_no_executable_is_selected() -> None:
     session = Mock()
     session.env = {}
+    session.posargs = []
     with patch.dict(os.environ, {}, clear=True), patch.object(noxfile, "install_locked"), \
             patch.object(noxfile, "build_test_pex") as build:
         noxfile.e2e(session)
@@ -176,3 +178,36 @@ def test_e2e_rejects_wrong_release_instead_of_overriding_expectation(tmp_path: P
     with pytest.raises(ValueError):
         noxfile.select_e2e_pex(session)
     assert session.env["DEVCAPSULE_EXPECTED_RELEASE_VERSION"] == "0.2.11rc3"
+
+
+def test_base_smoke_builds_with_release_and_pins_all_consumers_to_result(tmp_path: Path) -> None:
+    executable = tmp_path / "candidate.pex"
+    executable.write_bytes(b"candidate bytes")
+    session = Mock()
+    session.env = {noxfile.PEX_UNDER_TEST_ENV: str(executable)}
+    identity = {"version": "0.2.11rc3", "build_mnemonic": "v0.2.11-rc3", "source_revision": "a" * 40}
+    image_id = "sha256:" + "b" * 64
+    session.run.side_effect = [json.dumps(identity), None, json.dumps([{"Id": image_id}])]
+    with patch.object(noxfile, "PROJECT_ROOT", tmp_path):
+        noxfile.build_e2e_base(session)
+    build_args = session.run.call_args_list[1].args
+    assert build_args[:6] == (str(executable), "images", "build", "--type", "base", "--recipe")
+    assert "--allow-local-source" not in build_args
+    assert build_args[-2:] == ("--source-revision", "a" * 40)
+    assert session.env["DEVCAPSULE_E2E_BASE_IMAGE"] == build_args[build_args.index("--tag") + 1]
+    assert session.env["DEVCAPSULE_EARLY_EXIT_E2E_IMAGE"] == image_id
+    assert session.env["DEVCAPSULE_E2E_BUILT_BASE"] == image_id
+    evidence = json.loads((tmp_path / "dist/e2e-base-build.json").read_text())
+    assert evidence["image-id"] == image_id and evidence["builder"] == identity
+
+
+def test_base_smoke_requires_selected_binary_before_building_anything() -> None:
+    session = Mock()
+    session.env = {}
+    session.posargs = ["--build-base"]
+    session.error.side_effect = ValueError
+    with patch.dict(os.environ, {}, clear=True), patch.object(noxfile, "install_locked"), \
+            patch.object(noxfile, "build_test_pex") as build:
+        with pytest.raises(ValueError):
+            noxfile.e2e(session)
+    build.assert_not_called()

@@ -56,6 +56,9 @@ def test_pex_runtime_help_inside_disposable_image(tmp_path: Path, built_pex: Pat
         "or set DEVCAPSULE_E2E_BASE_IMAGE"
     )
 
+    if expected_base := os.environ.get("DEVCAPSULE_E2E_BUILT_BASE"):
+        assert json.loads(inspected_base.stdout)[0]["Id"] == expected_base
+
     identifier = uuid.uuid4().hex
     image = f"devcapsule-runtime-e2e:{identifier}"
     materialized_image: str | None = None
