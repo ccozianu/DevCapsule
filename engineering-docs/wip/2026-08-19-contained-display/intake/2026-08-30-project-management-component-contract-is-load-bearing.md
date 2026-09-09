@@ -36,7 +36,7 @@ the supervisor.
 ## References
 
 - Registration and scope:
-  `engineering-docs/archive/2026-08-30-component-catalog/CURRENT-STATUS.md`.
+  `engineering-docs/wip/2026-08-30-component-catalog/CURRENT-STATUS.md`.
 - Ledger rows now owned by `component-catalog`: *Independent IDE Surface:
   VSCodium On The Normal Project Path* and the Antigravity slot of *Curated
   Agent Choice*, in

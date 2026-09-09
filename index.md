@@ -49,7 +49,7 @@ status file; internal WIP/archive documents use the local index in that status.
 
 ## Workstream Status
 
-- [Component catalog successful archive](engineering-docs/archive/2026-08-30-component-catalog/CURRENT-STATUS.md)
+- [Component catalog current status](engineering-docs/wip/2026-08-30-component-catalog/CURRENT-STATUS.md)
 
 - [Multiple-stream workflow successful archive](engineering-docs/archive/2026-08-08-multi-workflow/CURRENT-STATUS.md)
 - [Recursive dogfood E2E successful archive](engineering-docs/archive/2026-08-06-recursive-e2e/CURRENT-STATUS.md)
@@ -125,8 +125,6 @@ history; record current decisions in the active documents above.
 - [Vibe-coding process bootstrap template, frozen copy](docker4pycharm/image-assets/vibe-coding-process.md)
 
 ## Implementation Notes And Decisions
-
-- [Antigravity CLI acquisition and redistribution analysis](engineering-docs/implementation-notes/devcapsule/2026-09-02-antigravity-cli-license-and-redistribution-analysis.md)
 
 - [User-requested session-record policy](engineering-docs/session-records/devcapsule/README.md)
 - [Project-management resume and individual-projects framing session record](engineering-docs/session-records/devcapsule/2026-08-19-resume-verification-and-individual-projects.md)

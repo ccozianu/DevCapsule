@@ -13,7 +13,7 @@ smoke had run with the ownership repaired by hand (`chown`)
 Requirements: R-PRODUCT-001
 
 Related: the workstream's
-[Antigravity license and redistribution analysis](../../implementation-notes/devcapsule/2026-09-02-antigravity-cli-license-and-redistribution-analysis.md)
+[Antigravity license and redistribution analysis](../../wip/2026-08-30-component-catalog/antigravity-cli-license-and-redistribution-analysis.md)
 (its state-location fact is corrected by this record).
 
 ## Symptom
