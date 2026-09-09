@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; full candidate-base smoke and existing recursive suite passed
+State: active 2026-09-09; RC3 graphical successor running, awaiting owner GUI acceptance and normal exit
 
 Integration target: `main`
 
@@ -12,6 +12,62 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Graphical Recursive Successor (2026-09-09)
+
+The owner corrected the preceding execution scope: the recursive acceptance
+they requested includes a built graphical successor, manual inspection, and
+normal GUI exit producing container code 0. Their recollection is confirmed by
+the archived recursive workstream's live Stage 6 evidence and the
+2026-08-15 detached-successor cleanup bug, which recorded both historical
+successors as `Exited (0)`. The current Nox wrapper is only the preliminary
+subset; calling the graphical continuation optional was an agent scope error.
+The owner has already requested that continuation; do not ask for its scope
+authorization again.
+
+Executed the existing `recursive-e2e launch-successor` and independent
+`inspect-successor` commands through the published RC3 executable. Created an
+ownership-marked run using the existing clean-clone protocol, detached its
+scratch checkout at exact RC3 source, removed its local origin, and verified
+the clone is clean and independent. This is test-owned source, not a new
+editing workstream. Configured isolated XDG/home/IDE state and the declared
+acquisitions plus Docker/network/sudo access. The checkout explicitly authorizes
+the retained full RC3-built base; its committed v0.2.10 recommendation stays
+unchanged. No personal IDE or agent credential state was copied.
+
+Run: `8d769574856fb2b7a7e3a296c04d7188`.
+Source: `94e798f1d1a7aaab93ae3e47d9636471448a8e66`.
+Container: `devcapsule-e2e-8d769574856fb2b7a7e3a296c04d7188-successor`, ID
+`89bbff543005849e35899b7d45dabc366be754c366a55e58c3f7b5f5927ed26f`.
+Materialized image:
+`sha256:2e3b67566a8975e834caac5f80a34ef08a34c2818011e7d93a3501621e03b5df`.
+Base identity:
+`sha256:90eece0d93ab9c94265efc1ac77b363e4300d345c58761ab58bc31d20667639a`.
+Runtime PEX SHA-256:
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+
+The real component image built successfully. Independent inspection passed
+identity, exact mounts/environment/security/resource/restart settings, runtime
+plan digest and read-only mount, run ID, supervised PyCharm process, and tool
+versions (Claude 2.1.261, Codex 0.153.4, Node 22.23.1, javac 25.0.4, Maven
+3.9.16). An additional in-container version call reports `v0.2.11-rc3`; image
+labels independently confirm the new base ID and published executable checksum.
+
+Retained run root is beneath the current capsule's
+`~/.local/share/devcapsule/e2e-workspaces/`, named by the run ID. It contains
+the ownership marker, `milestone-manifest.json`, `expected-plan.json`,
+`candidate-inspection.json`, `candidate-launch.log`, and
+`candidate-command.py`. The last file invokes the retained release executable
+with the run's isolated configuration, allowing repeat inspection. Its checkout,
+state and staging must remain while the GUI is running. Temporary monitoring:
+`docker wait` writes `/tmp/devcapsule-rc3-successor-exit-code`.
+
+**Planned next step:** the owner has been asked to inspect the new PyCharm
+window, check editor/terminal usability, and exit that instance normally.
+Record their result and independently verify the exact container stopped with
+exit code 0 and no OOM. A running container's default `ExitCode=0` is not exit
+evidence. Do not close the control capsule or remove historical retained runs.
+No GUI acceptance or successful exit is claimed yet.
 
 ## Recursive Suite Execution (2026-09-09)
 
@@ -49,10 +105,8 @@ or launch. No new successor IDE, GUI acceptance, or full recursive lifecycle
 acceptance is claimed. The earlier full candidate-base smoke remains separate
 evidence. No implementation changes were needed to execute this suite.
 
-**Planned next step:** the owner has been asked whether to add an actual
-successor launch using the published RC3 executable and retained candidate base,
-with a manual IDE/terminal check. Otherwise continue review/integration of the
-smoke harness and final promotion at the frozen accepted RC3 source.
+The original optional-scope question is superseded by the owner's correction
+and the graphical successor execution recorded above.
 
 ## Full Candidate Base Smoke (2026-09-09)
 
@@ -951,10 +1005,11 @@ its ruling thread open):
 
 ## Open Threads
 
-- The requested existing recursive suite passed, as did published RC3's direct
-  preflight/planning commands. Actual successor launch is a separate step; the
-  optional scope question to the owner is pending. No manual IDE result is
-  inferred from the automated checks. Temporary test resources were cleaned.
+- The requested graphical recursive successor is now running with the exact
+  RC3 executable and new full base; independent inspection passed. Owner GUI
+  acceptance and verified normal container exit remain pending. Retain this
+  run's supporting files until it stops. The earlier preliminary suite's
+  temporary resources were cleaned; the live successor is intentionally retained.
 
 - The full-base coverage correction is complete: RC3's own builder produced a
   local recipe-7 base and all seven tests passed. Retained image references and
