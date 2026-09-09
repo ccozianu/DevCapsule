@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; final implementation slice ready for PR #65, graphical successor exited successfully
+State: active 2026-09-09; v0.2.11 published and independently verified; implementation frozen, workflow closure remains
 
 Integration target: `main`
 
@@ -12,6 +12,46 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Stable Release Published (2026-09-09)
+
+The owner explicitly requested final publication. Reverified PR #65 merged into
+main at `b7e6086029429d1f60668ef37338b57317576fc6`, synchronized the selected
+branch, checked the accepted RC3's main ancestry and promotion record, and
+confirmed the retained release branch still points at its exact source.
+Created and pushed annotated tag `v0.2.11` at
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`. No candidate tag or source was moved.
+
+[Backend run 34413922358](https://github.com/ccozianu/devcapsule/actions/runs/34413922358)
+completed successfully. Every gate passed: promotion/ref checks; source tests
+and mypy; accepted-candidate checksum; final packaging build and frozen-input
+comparison; packaging integrations; clean-machine execution; component-cache
+reuse and launcher delivery; pinned-base runtime sessions; staging/download byte
+comparison; and the downloaded executable's clean-machine proof.
+
+[v0.2.11](https://github.com/ccozianu/devcapsule/releases/tag/v0.2.11) is public,
+not draft or prerelease, published at `2026-09-09T22:51:37Z`. Independently
+queried GitHub Latest: it selects `v0.2.11`. Downloaded all three public assets
+into ignored `devcapsule-src/dist/releases/v0.2.11/`; the executable checksum
+matches both the checksum file and manifest:
+
+```text
+0f5f6bce218076d8ab74881e32d502895f57a3a15279b182ce7d1cf1016d7dce
+```
+
+Executing those downloaded bytes reports version `0.2.11`, mnemonic
+`v0.2.11`, and exact accepted source `94e798f1d1a7aaab93ae3e47d9636471448a8e66`.
+The full release-manifest verifier also passed locally using files extracted
+from the final tag, the accepted RC3 manifest, and main's acceptance record.
+This independently verifies frozen dependencies/Python/base inputs as well as
+artifact identity. Final bytes intentionally differ from RC3 because package
+metadata changes; the source commit is identical.
+
+**Planned next step:** workflow closure only. PR #65 and release publication
+are complete. Do not add implementation scope or repeat release preparation.
+The historical checkpoints below retain earlier pending states for context;
+this section supersedes them. Final closure records still need normal PR
+delivery to main before the workstream can be marked concluded.
 
 ## Final Delivery Boundary (2026-09-09)
 
@@ -1034,6 +1074,11 @@ its ruling thread open):
    of the checkout-local need once it exists.
 
 ## Open Threads
+
+- v0.2.11 is published, is GitHub Latest, and passed all backend and independent
+  downloaded-asset checks. PR #65 is merged. Only workflow finalization remains;
+  no release, implementation, GUI-exit, or intake-delivery blocker remains.
+  The successful GUI run and local candidate base remain retained as evidence.
 
 - The graphical recursive successor passed inspection and exited normally with
   code 0 and no OOM. Owner requested merge readiness and declared this the last
