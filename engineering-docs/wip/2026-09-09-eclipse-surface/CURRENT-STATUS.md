@@ -166,12 +166,35 @@ been chosen, no capability name has been ruled, and no branch has been forked.
   handoff or its coordination backlog, and it has not been placed in the V1
   scope ledger. Whether Eclipse is a V1 surface or a post-V1 addition is an
   open project-level question that `project-management` owns.
+- The custody record above is unrouted. Delivering the stranded item to
+  `workflow-improvements`' intake, dispositioning it, fixing the protocol, and
+  auditing the other four outboxes for the same condition are all open and all
+  belong elsewhere. Only `project-management/outbox` was examined.
 - `index.md` on `main` at `857035a` lists four WIP workstream status files but
   omits `component-catalog`. This registration adds its own row and leaves that
   pre-existing gap alone rather than editing another workstream's routing.
 
 ## Documents
 
-This workstream has no internal documents yet beyond this handoff, its
-[intake](intake/README.md), and its
-[disposition log](intake-dispositions.md).
+- [Custody record: a fourth outbox-reset loss](2026-09-09-outbox-reset-loss-record.md)
+  — held here temporarily at the product owner's direction and **not owned by
+  this workstream**; see *Held In Custody* below.
+- [Intake](intake/README.md)
+- [Disposition log](intake-dispositions.md)
+
+## Held In Custody
+
+Opening this workstream required delivering its registration through
+`project-management/outbox`, and the send protocol begins by hard-resetting that
+branch from `main`. The branch was found carrying an undelivered item from
+2026-08-19 that has never reached `main` and that contains a ratified
+product-owner decision on coordination storage — the fourth recorded instance of
+the outbox-reset loss, and the first caught before the reset destroyed anything.
+
+At the owner's explicit direction on 2026-09-09, the mechanism and the item's
+full verbatim content are recorded in
+[the custody record](2026-09-09-outbox-reset-loss-record.md) so that neither can
+be lost by a branch operation. That document belongs to `project-management`
+(the communication record) and `workflow-improvements` (the protocol fix). It
+should be moved and deleted from here once the owner assigns it. Nothing about
+it is `eclipse-surface` work, and this workstream is not tracking it.
