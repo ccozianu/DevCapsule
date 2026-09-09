@@ -1,0 +1,16 @@
+{
+  "accepted-by": "Codex, operator authorized by ccozianu on 2026-09-09",
+  "candidate-sha256": "32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6",
+  "candidate-tag": "v0.2.11-rc3",
+  "evidence": [
+    "https://github.com/ccozianu/devcapsule/actions/runs/34333414510",
+    "Automated source, packaging, clean-machine, component cache and runtime-session gates passed, including download byte comparison and proof of the downloaded PEX. Acceptance covers this release/build change; no new GUI/login or provider acceptance is claimed."
+  ],
+  "integration": {
+    "baseline": "3f028eeb97d7de6bce5b9f2ac2faf0a1b940cb61",
+    "method": "ancestry"
+  },
+  "schema-version": 1,
+  "source-revision": "94e798f1d1a7aaab93ae3e47d9636471448a8e66",
+  "tag": "v0.2.11"
+}

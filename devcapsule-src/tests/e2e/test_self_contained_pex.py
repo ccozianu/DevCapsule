@@ -10,9 +10,8 @@ import pytest
 
 import tomllib
 
-# The artifact under test is built from this tree, so compare against the
-# authored version, not installed metadata an editable install may have frozen.
-PACKAGE_VERSION = tomllib.loads(
+# CI supplies the tag-derived version; local builds use the source baseline.
+PACKAGE_VERSION = os.environ.get("DEVCAPSULE_EXPECTED_RELEASE_VERSION") or tomllib.loads(
     (Path(__file__).resolve().parents[2] / "pyproject.toml").read_text(
         encoding="utf-8"
     )

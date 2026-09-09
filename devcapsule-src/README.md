@@ -252,26 +252,25 @@ chmod 0755 devcapsule.pex
 ./devcapsule.pex version --json
 ```
 
-The GitHub backend owns release construction. Pushing a numeric `v*` tag (for
-example `v026`) runs `.github/workflows/release-pex.yml`, which checks out that
-exact tag, runs source validation, builds the self-contained PEX, and proves it
-inside a network-disabled Ubuntu container with no Python. Only then does it
-create the GitHub Release with `devcapsule.pex` and
-`devcapsule.pex.sha256`. The workflow downloads the published assets, verifies
-their checksum and byte identity, restores the executable bit, and repeats the
-no-Python/no-network proof. A manual workflow run can retry an existing tag;
-if its Release already exists, the rebuilt bytes must match and are never
-silently replaced.
+The GitHub backend owns release construction. Pushing `v0.2.11-rc0` on
+`release-0.2.11` runs source, packaging, clean-machine, component-cache and
+runtime-session gates, then publishes download-verified assets as a prerelease.
+The assets include `devcapsule.pex`, its SHA-256 checksum, and a release manifest.
+Candidates do not require main integration and never become GitHub's Latest.
 
-The release workflow passes the exact tag to the build as its official
-mnemonic. The build rejects a mnemonic that is not an exact tag for the
-checkout revision or does not equal `v` plus the checked-in package version,
-so an official release is always tagged `v<version>` (for example `v0.2.7`).
-Thus `version --json` reports `v0.2.7` for the official release and
-`v0.2.7-local-linux-x86_64` for ordinary development binaries; base-image
-builds propagate the same value as the `devcapsule.pex.build-mnemonic` and
-`org.opencontainers.image.version` OCI labels. Artifacts from the v026-era
-scheme (`v026`, `local-v026`) remain readable.
+Final tags such as `v0.2.11` must identify the accepted candidate's source commit
+on the matching release branch. The backend checks a reviewed engineering
+promotion record on main, including acceptance of the candidate checksum and
+main integration or a scoped exception. It rebuilds with the final package
+version, checks dependency and Python fingerprints against the candidate, and
+reruns the release gates. See the [developer release protocol](../README.md).
+
+The tag supplies the package version in a disposable packaging tree; no version
+bump is needed in the tagged source. `v0.2.11-rc0` reports package version
+`0.2.11rc0`, while `v0.2.11` reports `0.2.11`. Development builds retain the
+checked-in baseline and a `-local-linux-x86_64` mnemonic. Existing release assets
+are verified and reused on retries; published candidate bytes are never replaced.
+Historical v026-era identities remain readable.
 
 The executable contains CPython 3.12.14 from the pinned 20260814 Python Build
 Standalone release, the Python CLI, runtime dependencies, and the legacy

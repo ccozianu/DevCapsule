@@ -70,20 +70,33 @@ cd devcapsule-src
 .venv/bin/python -m nox -s build
 ```
 
-Release by pushing a numeric `vMAJOR.MINOR.PATCH` tag on `main`:
+Prepare releases on a retained `release-MAJOR.MINOR.PATCH` branch. Pushing an
+immutable candidate tag runs the release backend without requiring main integration:
 
 ```text
-git fetch origin
-git tag v0.2.11 origin/main
-git push origin v0.2.11
+git branch release-0.2.11 HEAD
+git tag v0.2.11-rc0 HEAD
+git push --atomic origin release-0.2.11 v0.2.11-rc0
 ```
 
-The tag supplies the distribution version; no version-bump commit is required.
-CI verifies mainline membership, builds and validates the PEX, stages the assets
-in a draft GitHub release, verifies the downloaded bytes, then publishes.
-Retries reuse staged bytes. The checked-in `pyproject.toml` version is only the
-source/local-build baseline; the release builder stamps the tag-derived version
-into its disposable packaging tree.
+CI tests the source, builds the PEX, proves its clean-machine and component/runtime
+behavior, then download-verifies and publishes a GitHub **prerelease**. Candidate
+fixes receive new tags (`-rc1`, etc.). The package version is `0.2.11rc0`.
+
+Accept the exact candidate with smoke/E2E evidence, integrate its changes through
+a PR, and commit its promotion record at `engineering-docs/releases/v0.2.11.json`
+on main. Then push `v0.2.11` at the accepted candidate commit. CI checks that
+record, release-branch membership, and main integration (ancestry, reviewed
+cherry-pick/squash evidence, or a scoped exception). It builds final-version bytes,
+checks frozen dependencies against the candidate, and repeats all release gates.
+The checked-in package version remains the local-build baseline.
+
+The [release protocol](engineering-docs/implementation-notes/devcapsule/2026-09-01-release-and-validation-process.md)
+describes the record, maintenance releases, and exact operator commands. A future
+patch starts from the previous release tag even when main is not shippable.
+Retries verify and reuse staged assets; candidate tags and published assets stay
+immutable. Prereleases never become Latest; final publication uses GitHub's
+semantic-version-based Latest selection.
 
 New base images contain tools and OS dependencies; the launcher supplies its own
 PEX during environment materialization. Ordinary CLI releases reuse the pinned
@@ -123,7 +136,7 @@ deliberately discard cached Nox environments, add
 
 For CLI installation and usage, see
 [`devcapsule-src/README.md`](devcapsule-src/README.md).
-The initial binary distribution channel is GitHub Releases: pushing a numeric
+The initial binary distribution channel is GitHub Releases: pushing an RC or final
 `v*` tag runs the backend release workflow, which builds and clean-machine
 proves the self-contained Linux x86-64 PEX before publishing it with a SHA-256
 checksum, then downloads and proves the published bytes again.

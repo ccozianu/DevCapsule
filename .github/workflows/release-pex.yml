@@ -38,17 +38,7 @@ jobs:
 
       - name: Verify the selected tag and revision
         run: |
-          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Release tags must be vMAJOR.MINOR.PATCH." >&2
-            exit 2
-          fi
-          tag_revision="$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")"
-          checkout_revision="$(git rev-parse HEAD)"
-          test "$checkout_revision" = "$tag_revision"
-          git fetch origin main
-          git rev-list --first-parent origin/main > "$RUNNER_TEMP/mainline-revisions"
-          grep -Fx "$tag_revision" "$RUNNER_TEMP/mainline-revisions"
-          echo "DEVCAPSULE_EXPECTED_RELEASE_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+          python3 scripts/release-protocol.py "$RELEASE_TAG" --output "$RUNNER_TEMP/release-gate.json"
 
       - name: Set up Python 3.12 for the backend build
         uses: actions/setup-python@v5
@@ -66,6 +56,23 @@ jobs:
       - name: Run source tests and type checks
         run: python -m nox -s syntax tests typecheck
 
+      - name: Verify accepted candidate assets
+        if: env.RELEASE_PRERELEASE == 'false'
+        run: |
+          candidate="$RUNNER_TEMP/accepted-candidate"
+          mkdir -p "$candidate"
+          test "$(gh release view "$ACCEPTED_CANDIDATE" --json isDraft,isPrerelease --jq '[.isDraft, .isPrerelease] | @json')" = '[false,true]'
+          gh release download "$ACCEPTED_CANDIDATE" --dir "$candidate" \
+            --pattern devcapsule.pex --pattern devcapsule.pex.sha256 --pattern release-manifest.json
+          (cd "$candidate" && sha256sum --check devcapsule.pex.sha256)
+          python - "$candidate" "$RUNNER_TEMP/release-gate.json" <<'PY'
+          import hashlib, json, sys
+          from pathlib import Path
+          path = Path(sys.argv[1])
+          record = json.load(open(sys.argv[2]))["promotion"]["record"]
+          assert hashlib.sha256((path / "devcapsule.pex").read_bytes()).hexdigest() == record["candidate-sha256"]
+          PY
+
       - name: Recover previously staged artifacts
         id: recover
         run: |
@@ -76,7 +83,12 @@ jobs:
               --pattern devcapsule.pex --pattern devcapsule.pex.sha256 \
               --pattern release-manifest.json
             (cd dist && sha256sum --check devcapsule.pex.sha256)
-            python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)" --verify
+            chmod 0755 dist/devcapsule.pex
+            manifest_args=(--gate "$RUNNER_TEMP/release-gate.json")
+            if [ "$RELEASE_PRERELEASE" = false ]; then
+              manifest_args+=(--candidate "$RUNNER_TEMP/accepted-candidate/release-manifest.json")
+            fi
+            python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)" "${manifest_args[@]}" --verify
             chmod 0755 dist/devcapsule.pex
             echo 'exists=true' >> "$GITHUB_OUTPUT"
           fi
@@ -93,7 +105,11 @@ jobs:
           dist/devcapsule.pex version --json | tee dist/devcapsule-version.json
           test "$(python -c 'import json; print(json.load(open("dist/devcapsule-version.json"))["build_mnemonic"])')" = "$RELEASE_TAG"
           (cd dist && sha256sum devcapsule.pex > devcapsule.pex.sha256)
-          python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)"
+          manifest_args=(--gate "$RUNNER_TEMP/release-gate.json")
+          if [ "$RELEASE_PRERELEASE" = false ]; then
+            manifest_args+=(--candidate "$RUNNER_TEMP/accepted-candidate/release-manifest.json")
+          fi
+          python scripts/release-manifest.py "$RELEASE_TAG" "$(git rev-parse HEAD)" "${manifest_args[@]}"
 
       - name: Run packaging integration tests against the release PEX
         env:
@@ -143,7 +159,7 @@ jobs:
             "dist/devcapsule.pex#Self-contained Linux x86-64 CLI" \
             "dist/devcapsule.pex.sha256#SHA-256 checksum" \
             "dist/release-manifest.json#Release inputs and artifact checksums" \
-            --verify-tag --generate-notes --draft
+            --verify-tag --generate-notes --draft --prerelease="$RELEASE_PRERELEASE" --latest=false
 
       - name: Download and verify the published assets
         run: |
@@ -168,7 +184,17 @@ jobs:
       - name: Publish the complete release
         run: |
           if [ "$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft)" = true ]; then
-            gh release edit "$RELEASE_TAG" --draft=false
+            # Let GitHub choose Latest
+            # by semantic version so an older maintenance release cannot displace it.
+            latest=legacy
+            if [ "$RELEASE_PRERELEASE" = true ]; then latest=false; fi
+            # The by-tag REST endpoint excludes drafts; list releases with the
+            # authenticated token to obtain the staged release's numeric ID.
+            release_id="$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+              --jq ".[] | select(.tag_name == \"$RELEASE_TAG\") | .id")"
+            [[ "$release_id" =~ ^[0-9]+$ ]]
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$release_id" \
+              -F draft=false -F prerelease="$RELEASE_PRERELEASE" -f make_latest="$latest" >/dev/null
           fi
 
       - name: Summarize the release

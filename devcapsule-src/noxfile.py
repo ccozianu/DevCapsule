@@ -103,6 +103,8 @@ def run_typecheck(session: nox.Session) -> None:
         str(PROJECT_ROOT / "noxfile.py"),
         str(VERSION_SCRIPT),
         str(PROJECT_ROOT / "scripts" / "release-manifest.py"),
+        str(PROJECT_ROOT / "scripts" / "release-protocol.py"),
+        str(PROJECT_ROOT / "scripts" / "prepare-promotion.py"),
     )
 
 

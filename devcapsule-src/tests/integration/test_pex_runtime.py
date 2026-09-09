@@ -181,8 +181,8 @@ def test_built_pex_exposes_self_contained_source_identity(built_pex: Path) -> No
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize("release", [False, True])
-def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: bool) -> None:
+@pytest.mark.parametrize("release", [None, "v98.7.6", "v98.7.6-rc0"])
+def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: str | None) -> None:
     source_project = Path(__file__).resolve().parents[2]
     repository = tmp_path / "repository"
     project = repository / "devcapsule-src"
@@ -241,10 +241,14 @@ def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: b
         subprocess.run(["git", "-C", str(repository), "config",
                         f"url.{remote}.insteadOf",
                         "https://github.com/example/devcapsule-unpublished-test.git"], check=True)
-        subprocess.run(["git", "-C", str(repository), "tag", "v98.7.6"], check=True)
-        subprocess.run(["git", "-C", str(repository), "push", "origin", "v98.7.6"], check=True,
+        subprocess.run(["git", "-C", str(repository), "tag", "-a", "-m", "Candidate", release], check=True)
+        subprocess.run(["git", "-C", str(repository), "push", "origin", release], check=True,
                        capture_output=True)
-        build_arguments = ["--release-mnemonic", "v98.7.6", "--source-repository",
+        # Enough advertised refs to expose an early-exiting grep under pipefail.
+        subprocess.run(["git", "--git-dir", str(remote), "update-ref", "--stdin"],
+                       input="".join(f"create refs/heads/fixture-{index} {revision}\n" for index in range(500)),
+                       text=True, check=True, capture_output=True)
+        build_arguments = ["--release-mnemonic", release, "--source-repository",
                            "https://github.com/example/devcapsule-unpublished-test"]
     build_environment = {
         name: value
@@ -291,16 +295,16 @@ def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: b
     )
     value = json.loads(version.stdout)
     assert value["build_mnemonic"] == (
-        "v98.7.6" if release else
+        release if release else
         f"v{tomllib.loads((project / 'pyproject.toml').read_text())['project']['version']}-local-{os.environ.get('DEVCAPSULE_SCIE_PLATFORM', 'linux-x86_64')}"
     )
     if release:
-        assert value["version"] == "98.7.6"
+        assert value["version"] == release[1:].replace("-rc", "rc")
         installed_version = subprocess.check_output(
             [str(output), "-c", "from importlib.metadata import version; print(version('devcapsule'))"],
             env={**os.environ, "PEX_INTERPRETER": "1"}, text=True,
         ).strip()
-        assert installed_version == "98.7.6"
+        assert installed_version == release[1:].replace("-rc", "rc")
         assert subprocess.check_output(["git", "-C", str(repository), "diff", "--exit-code"], text=True) == ""
     assert value["source_revision"] == revision
     assert value["source_repository"] == "https://github.com/example/devcapsule-unpublished-test"
