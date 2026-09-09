@@ -13,22 +13,35 @@ Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
 
-## Current Release-Protocol Discussion (2026-09-09)
+## Current Release Experiment (2026-09-09)
 
-Verified from fetched `origin/main`: PR #62 merged the earlier release/build
-implementation at `011226b`; main is at `3f028ee` (coverage update). This checkout
-was synchronized to that mainline. The previous PR-creation blocker below is
-historical; it no longer describes integration status.
+Owner accepted the [candidate protocol](release-candidates-proposal.md) and
+explicitly authorized implementing and exercising it for v0.2.11. Next step:
+validate the new gates, publish `v0.2.11-rc0` on `release-0.2.11`, accept exact
+candidate smoke/E2E evidence, integrate through a PR, then publish the final tag
+at that same source commit. No GUI/login smoke is claimed by automation.
 
-The owner now proposes release-candidate branches and prerelease tags, followed
-by final release branches and tags whose changes are integrated to main or have
-an explicitly documented exception. Main should remain open and need not itself
-be shippable for maintenance releases. The next slice is settling and implementing
-that protocol. The [candidate proposal](release-candidates-proposal.md) records
-the requested direction, suggested acceptance/integration checks, the RC-versus-
-final artifact identity tradeoff, and required branch-policy amendments. These
-refinements are proposed, not implemented. No candidate/release branch or tag
-was created during this discussion.
+Branch-policy ruling: release refs are durable anchors rather than new
+workstreams. `component-catalog/antigravity-cli` remains the editing selection;
+release refs may outlive it and must not absorb advancing main after acceptance.
+The owner directs bias for action while workflow-improvements resolves the
+reusable naming rules. The intake is committed as `8c99f43` and pushed on
+`component-catalog/outbox`; **main delivery is pending** because connector PR
+creation still returns HTTP 403, Resource not accessible by integration. The
+owner has been asked to merge the intake-only comparison or restore access.
+This is the explicit owner-authorized gap handling, not a silent workflow edit.
+
+Verified fetched main is `3f028ee`, including PR #62's previous implementation.
+The branch was synchronized before this slice. Implementation now includes RC
+version normalization, branch membership, exact-candidate acceptance from an
+engineering JSON record on main, ancestry/reviewed/exception integration routes,
+prerelease metadata, final dependency/Python fingerprint comparison, and an
+acceptance-record helper. Final source must remain exactly the accepted RC SHA.
+
+Validation so far: full Nox build passed with 574 unit tests, one existing xfail,
+9 packaging integration tests (including a real RC PEX), and type checks.
+Actionlint passed. Candidate publication and final integration remain next;
+no v0.2.11 tag has yet been created at this checkpoint.
 
 ## Previous Implementation Checkpoint (2026-09-08)
 

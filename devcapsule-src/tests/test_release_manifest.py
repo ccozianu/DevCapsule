@@ -25,3 +25,16 @@ def test_manifest_checks_release_identity_and_records_pinned_bases(tmp_path: Pat
         MODULE.manifest(pex, "v0.2.11", "a" * 40)
     with pytest.raises(ValueError, match="identity disagrees"):
         MODULE.manifest(pex, "v0.1.0", "b" * 40)
+
+
+def test_promotion_rejects_changed_dependency_bytes_and_wrong_candidate() -> None:
+    candidate = {"tag": "v0.2.11-rc0", "source-revision": "a" * 40,
+                 "artifacts": {"devcapsule.pex": "b" * 64}, "base-references": ["base@sha256:abc"],
+                 "frozen-inputs": {"dependency": "hash"}}
+    final = {**candidate, "tag": "v0.2.11"}
+    record = {"candidate-tag": candidate["tag"], "candidate-sha256": "b" * 64}
+    MODULE.check_candidate(final, candidate, record)
+    with pytest.raises(ValueError, match="frozen-inputs"):
+        MODULE.check_candidate({**final, "frozen-inputs": {}}, candidate, record)
+    with pytest.raises(ValueError, match="acceptance"):
+        MODULE.check_candidate(final, candidate, {**record, "candidate-sha256": "c" * 64})

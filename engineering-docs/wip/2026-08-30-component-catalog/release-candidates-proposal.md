@@ -1,8 +1,7 @@
 # Release Candidates And Maintenance Branches
 
-Status: proposed, 2026-09-09. Records the owner's requested direction and the
-agent's refinements; no release workflow or branch-policy change is implemented
-by this proposal.
+Status: accepted by the owner, 2026-09-09; implementation and first release
+experiment in progress. `release-V` is used from candidate preparation onward.
 
 ## Owner's Requested Direction
 
@@ -14,7 +13,7 @@ or a documented engineering exception with rationale. Main remains open for
 unrelated development. Future fixes can start from the released code even when
 main is not shippable.
 
-## Proposed Protocol
+## Accepted Protocol
 
 1. Cut the candidate from an identified mainline commit. For a maintenance
    release, cut from the exact previous release tag instead. Record that base;
@@ -109,3 +108,69 @@ creating miscellaneous unregistered workstreams is not the solution.
 - [Python version conventions](https://packaging.python.org/en/latest/discussions/versioning/)
 - [Git ancestry check](https://git-scm.com/docs/git-merge-base)
 - [Git patch equivalence](https://git-scm.com/docs/git-cherry)
+
+## Operator Commands And Promotion Record
+
+The workstream remains selected on its working branch. Release branches are
+persistent release anchors, authorized by the owner on 2026-09-09 while the
+workflow owner resolves naming policy. The intake was pushed through
+`component-catalog/outbox`; its main delivery is tracked in the handoff.
+
+Create `release-0.2.11` and `v0.2.11-rc0` at the prepared commit, push both refs
+atomically, and wait for Publish DevCapsule PEX to succeed. Download and smoke the
+prerelease PEX. Do not accept a moving branch or use another artifact's evidence.
+Use `scripts/prepare-promotion.py` to prepare the record from that prerelease:
+
+```text
+cd devcapsule-src
+.venv/bin/python scripts/prepare-promotion.py v0.2.11-rc0 \
+  --baseline FULL_PREPARATION_BASE_SHA --accepted-by OPERATOR \
+  --evidence 'Exact candidate smoke result and/or Actions run URL'
+```
+
+The helper downloads the candidate manifest and PEX, checks its checksum, and
+writes `engineering-docs/releases/v0.2.11.json`. Commit this on the integration
+side, never on the tested release branch. Integrate the candidate and record
+through normal PR delivery. The helper defaults to ancestry integration:
+
+```json
+{
+  "schema-version": 1,
+  "tag": "v0.2.11",
+  "candidate-tag": "v0.2.11-rc0",
+  "source-revision": "FULL_CANDIDATE_COMMIT_SHA",
+  "candidate-sha256": "SHA256_OF_ACCEPTED_PEX",
+  "accepted-by": "operator",
+  "evidence": ["Exact artifact smoke result and Actions run URL"],
+  "integration": {"method": "ancestry", "baseline": "FULL_PREPARATION_BASE_SHA"}
+}
+```
+
+For a squash/cherry-pick, change `method` to `reviewed`, add `main-commits` (full
+SHAs), `reviewed-by`, `rationale`, and `covers-release-delta: true`. The assertion
+covers the entire baseline-to-candidate delta. Every referenced commit must be
+reachable from main; review, rather than a patch-ID heuristic, vouches for any
+adaptation. An `exception` instead requires `authorized-by`, `rationale`,
+`forward-port-owner`, and `follow-up`. All records are reviewed engineering
+records read from main; no arbitrary bypass input is accepted.
+
+After integration:
+
+```text
+git tag v0.2.11 'v0.2.11-rc0^{commit}'
+git push origin v0.2.11
+```
+
+The final workflow requires the published prerelease and verifies its PEX hash,
+manifest identity, pinned bases, dependency distributions and embedded Python
+fingerprints against the new final PEX. The manifest embeds the promotion record
+and the main revision from which it was read. Main can advance afterward; an
+unchanged acceptance remains valid on retries. Missing or partial staged assets
+fail closed; recover from the retained Actions artifact rather than rebuilding
+or overwriting a published candidate. Failures requiring source changes use the
+next RC number.
+
+This first implementation automates each tag's build/test/publication and checks
+promotion. Candidate acceptance, PR integration, and pushing the final tag remain
+operator/agent steps. It does not invent owner GUI acceptance or silently merge
+PRs. Those steps can later be driven by a promotion workflow using the same gate.

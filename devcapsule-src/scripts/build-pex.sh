@@ -184,11 +184,12 @@ if [[ -n "${release_mnemonic}" ]]; then
     echo "scripts/build-pex.sh: --release-mnemonic cannot mark a local or unpublished build" >&2
     exit 2
   fi
-  if [[ ! "${release_mnemonic}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    echo "scripts/build-pex.sh: release mnemonic must be vMAJOR.MINOR.PATCH" >&2
+  if [[ ! "${release_mnemonic}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc(0|[1-9][0-9]*))?$ ]]; then
+    echo "scripts/build-pex.sh: release mnemonic must be vMAJOR.MINOR.PATCH[-rcN]" >&2
     exit 2
   fi
   project_version="${release_mnemonic#v}"
+  project_version="${project_version/-rc/rc}"
   tagged_revision="$(git -C "${repo_root}" rev-list -n 1 "refs/tags/${release_mnemonic}" 2>/dev/null || true)"
   if [[ -z "${repo_root}" || "${tagged_revision}" != "${head_revision}" ]]; then
     echo "scripts/build-pex.sh: release mnemonic ${release_mnemonic} must be an exact tag for checkout HEAD" >&2
