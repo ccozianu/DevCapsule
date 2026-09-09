@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; RC3 graphical successor running, awaiting owner GUI acceptance and normal exit
+State: active 2026-09-09; final implementation slice ready for PR #65, graphical successor exited successfully
 
 Integration target: `main`
 
@@ -12,6 +12,33 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Final Delivery Boundary (2026-09-09)
+
+Owner direction: this is the last task to deliver through this workstream.
+Freeze implementation scope. Do not resume the historical feature backlog
+below; remaining activity is PR delivery, the already-authorized v0.2.11
+promotion, and workflow finalization. The workstream is not concluded until
+those delivery obligations and its final records reach main.
+
+Integration branch: `component-catalog/antigravity-cli`, synchronized with
+fetched main. Delivery: [PR #65](https://github.com/ccozianu/devcapsule/pull/65),
+open and not draft; use the repository's PR merge policy. The source branch is
+frozen against unrelated changes. Release implementation and acceptance are
+already integrated through PR #63; workflow naming intake through PR #64.
+The remaining diff is the smoke harness, documentation, and execution evidence.
+Validation: full build (579 unit tests, one existing xfail, 9 packaging tests,
+mypy on 128 files), seven full-base Docker tests, two preliminary recursive
+tests, and the live graphical successor inspection and exit proof below.
+Later changes only record evidence and scope; no executable changes invalidate
+those results. The workstream intake contains only its README.
+
+Final tag `v0.2.11` is still absent. Promotion must tag the accepted RC3 source
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`, also the retained release-branch
+tip, rather than the smoke-harness branch tip. Recheck final publication before
+closing the workstream. Owner's "sounds good" and request for merge readiness
+accept proceeding with delivery; no specific provider-login or editor checklist
+claims are inferred from that brief response.
 
 ## Graphical Recursive Successor (2026-09-09)
 
@@ -62,12 +89,15 @@ with the run's isolated configuration, allowing repeat inspection. Its checkout,
 state and staging must remain while the GUI is running. Temporary monitoring:
 `docker wait` writes `/tmp/devcapsule-rc3-successor-exit-code`.
 
-**Planned next step:** the owner has been asked to inspect the new PyCharm
-window, check editor/terminal usability, and exit that instance normally.
-Record their result and independently verify the exact container stopped with
-exit code 0 and no OOM. A running container's default `ExitCode=0` is not exit
-evidence. Do not close the control capsule or remove historical retained runs.
-No GUI acceptance or successful exit is claimed yet.
+Completion recheck: Docker records this exact successor as `exited`, code `0`,
+`OOMKilled=false`, finished `2026-09-09T22:08:19.014764095Z`; the independent
+`docker wait` observer also returned `0`. The owner then said "sounds good"
+and asked to proceed to merge readiness. This proves normal graphical-session
+termination; no agent stop/kill was used. The stopped container and owned run
+remain as inspection evidence, and historical runs/control capsule are untouched.
+
+**Planned next step:** merge PR #65, complete final release promotion, then
+finalize the workstream under the owner's final-task scope cutoff above.
 
 ## Recursive Suite Execution (2026-09-09)
 
@@ -1005,11 +1035,12 @@ its ruling thread open):
 
 ## Open Threads
 
-- The requested graphical recursive successor is now running with the exact
-  RC3 executable and new full base; independent inspection passed. Owner GUI
-  acceptance and verified normal container exit remain pending. Retain this
-  run's supporting files until it stops. The earlier preliminary suite's
-  temporary resources were cleaned; the live successor is intentionally retained.
+- The graphical recursive successor passed inspection and exited normally with
+  code 0 and no OOM. Owner requested merge readiness and declared this the last
+  task for the workstream. Only delivery, final release promotion and closure
+  remain; historical feature threads below are not authorization for more work.
+  This run's stopped container and support files remain as evidence; preliminary
+  test resources were cleaned.
 
 - The full-base coverage correction is complete: RC3's own builder produced a
   local recipe-7 base and all seven tests passed. Retained image references and
@@ -1024,13 +1055,13 @@ its ruling thread open):
   older statements about those PRs below are historical. The new harness slice
   remains on the selected working branch for review. No release tag was moved.
 
-- v0.2.11 final remains pending PR delivery. RC3 is the accepted candidate;
+- v0.2.11 final promotion remains pending. RC3 is the accepted candidate;
   RC0 failed before staging, RC1 retains a fully verified draft after publication
   lookup failure, and RC2 is a published prerelease superseded by RC3's packaging
   pins. Keep their tags/assets unchanged. Re-verify remote PR, main, tag, release
   and Latest state on resume. No credentials were changed and no main integration
-  exception is claimed. The intake on `component-catalog/outbox` remains undelivered
-  until its separate PR reaches main. Everything required for the next step is
+  exception is claimed. PR #63 integrated source/acceptance and PR #64 delivered
+  the workflow intake; PR #65 carries the final smoke slice. Everything required for the next step is
   committed; temporary local build/proof artifacts are reproducible and not records.
 
 - **One base family, named plainly** (owner direction 2026-09-06,
