@@ -12,6 +12,38 @@ Delivery method: pull request
 
 Requirements: `R-PRODUCT-003`, `R-PRODUCT-005`, `R-PRODUCT-006`
 
+## Checkout Selected After v0.2.11 (2026-09-09)
+
+The owner replaced component-catalog closure with a pause at the successful
+v0.2.11 milestone, keeping it open for future components, and retained the
+instruction to position this checkout on `project-management/coordination`.
+That switch is complete. The local branch was fast-forwarded to current main
+`a27e0ed`, which contains its prior recovery work through PR #67 and the outbox
+deliveries through PRs #68 and #69. An initial switch to the obsolete local
+branch would have overwritten populated sample-submodule files; fast-forwarding
+the inactive branch first avoided changing or removing those files.
+
+Component-catalog's unmerged archive proposal is withdrawn. Its working branch
+at `85a94d6` and standing outbox at `986136f` carry the pause, resumable WIP
+handoff, successful release/GUI evidence, and corrected historical intake claim.
+The outbox contains only records/index changes and awaits main delivery; the
+GitHub connector last rejected PR creation with HTTP 403. Do not infer that
+the earlier closure proposal or a stale registry row is the owner's intent.
+The separately registered `eclipse-surface` workstream retains its routing.
+
+Read this handoff, Open Threads, and all eight intake items. Their historical
+statements need reconciliation: launcher-delivered runtime and the RC promotion
+protocol are now shipped in [v0.2.11](https://github.com/ccozianu/devcapsule/releases/tag/v0.2.11).
+The original sync intake is recoverable at commit
+`802adafa3d545895b979288a57cf1363329b94c7`; component-catalog corrected its
+delivery account, and PR #69 published its acknowledgment. No intake item was
+dispositioned merely by this checkout-selection task.
+
+**Planned next step:** reconcile the queued intake against the shipped milestone
+and owner decisions before prioritizing further work. The user has not selected
+a new implementation task. Earlier pending-release, component-catalog closure,
+and undelivered-PR statements below are historical, superseded where noted here.
+
 ## Goal
 
 Provide the durable project-management home for project-wide priorities,
