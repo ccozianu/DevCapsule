@@ -101,6 +101,17 @@ Retained evidence (do not confuse it with running infrastructure):
 
 ## Open Threads At Closure
 
+Correction to the historical handoff: the 2026-09-06 inside/outside-runtime
+intake was not delivered to main, despite this workstream's earlier send/pause
+claims. The cited `802adaf` is not a local object; the reconstructed item exists
+only in project-management's `2c1113e` recovery commit. That branch also contains
+an unsent correction addressed to this now-closing workstream. This archive
+corrects our own account before the switch; project management should retire
+that unsent correction rather than re-create a closed WIP directory when it
+synchronizes. The two non-preferred alternatives remain explicitly reconstructed,
+not verified recollections. The owner's later direction selected launcher PEX
+delivery, now shipped in v0.2.11; the lost-mail workflow issue remains distinct.
+
 No release or integration feature work remains. Questions and deferred options
 for project management, not automatic new implementation:
 
