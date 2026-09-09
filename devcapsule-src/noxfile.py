@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import os
+import json
+import hashlib
+import uuid
+import argparse
 from pathlib import Path
 
 import nox
@@ -58,15 +62,73 @@ def run_packaging_tests(session: nox.Session) -> None:
     )
 
 
-def run_e2e_tests(session: nox.Session) -> None:
+def select_e2e_pex(session: nox.Session) -> bool:
+    """Use an explicitly selected executable, or build the local smoke artifact."""
+    selected = session.env.get(PEX_UNDER_TEST_ENV) or os.environ.get(PEX_UNDER_TEST_ENV)
+    if not selected:
+        build_test_pex(session)
+        return False
+    path = Path(selected).expanduser().resolve(strict=True)
+    output = session.run(str(path), "version", "--json", external=True, silent=True)
+    assert isinstance(output, str), "Selected PEX must report its build identity"
+    identity = json.loads(output)
+    for name, key in (("DEVCAPSULE_EXPECTED_RELEASE_VERSION", "version"),
+                      ("DEVCAPSULE_EXPECTED_BUILD_MNEMONIC", "build_mnemonic")):
+        actual = identity[key]
+        expected = session.env.get(name) or os.environ.get(name)
+        if expected and expected != actual:
+            session.error(f"Selected PEX {key} is {actual!r}, expected {expected!r}")
+        session.env[name] = actual
+    session.env[PEX_UNDER_TEST_ENV] = str(path)
+    with path.open("rb") as stream:
+        checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+    session.log(f"E2E executable: {path}; {identity['build_mnemonic']}; source {identity['source_revision']}; sha256 {checksum}")
+    return True
+
+
+def build_e2e_base(session: nox.Session, *, network: str = "default") -> None:
+    """Build the real base with the selected release CLI and test its exact image ID."""
+    executable = session.env[PEX_UNDER_TEST_ENV]
+    assert executable, "Select the release executable before building its base"
+    output = session.run(executable, "version", "--json", external=True, silent=True)
+    assert isinstance(output, str)
+    identity = json.loads(output)
+    tag = f"devcapsule-base-e2e:{identity['build_mnemonic']}-{uuid.uuid4().hex[:12]}"
+    session.run(executable, "images", "build", "--type", "base", "--recipe", "ubuntu-24.04",
+                "--tag", tag, "--network", network, "--source-revision", identity["source_revision"], external=True)
+    output = session.run("docker", "image", "inspect", tag, external=True, silent=True)
+    assert isinstance(output, str)
+    inspection = json.loads(output)[0]
+    image_id = inspection["Id"]
+    # Dockerfile FROM needs an image reference, not the sha256: image-ID spelling.
+    # Keep the unique owned tag for builds and verify it against the captured ID.
+    session.env["DEVCAPSULE_E2E_BASE_IMAGE"] = tag
+    session.env["DEVCAPSULE_EARLY_EXIT_E2E_IMAGE"] = image_id
+    session.env["DEVCAPSULE_E2E_BUILT_BASE"] = image_id
+    session.env["DEVCAPSULE_EXPECTED_BASE_SOURCE"] = identity["source_revision"]
+    with Path(executable).open("rb") as stream:
+        checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+    evidence = PROJECT_ROOT / "dist" / "e2e-base-build.json"
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(json.dumps({"tag": tag, "image-id": image_id,
+                                   "builder": identity, "builder-sha256": checksum}, indent=2) + "\n")
+    session.log(f"Built base retained for inspection: {tag} ({image_id}); evidence: {evidence}")
+
+
+def run_e2e_tests(session: nox.Session, *, release_smoke: bool = False) -> None:
     environment: dict[str, str] = {}
     for name in (
         "DEVCAPSULE_E2E_BASE_IMAGE",
         "DEVCAPSULE_EARLY_EXIT_E2E_IMAGE",
         "DEVCAPSULE_CONTRIBUTOR_E2E_IMAGE",
         "DEVCAPSULE_PEX_CLEAN_MACHINE_IMAGE",
+        PEX_UNDER_TEST_ENV,
+        "DEVCAPSULE_EXPECTED_RELEASE_VERSION",
+        "DEVCAPSULE_EXPECTED_BUILD_MNEMONIC",
+        "DEVCAPSULE_E2E_BUILT_BASE",
+        "DEVCAPSULE_EXPECTED_BASE_SOURCE",
     ):
-        value = session.env.get(name)
+        value = session.env.get(name) or os.environ.get(name)
         if value is not None:
             environment[name] = value
     session.run(
@@ -75,7 +137,8 @@ def run_e2e_tests(session: nox.Session) -> None:
         "pytest",
         "--no-cov",
         "-m",
-        "e2e and not recursive_e2e",
+        "e2e and not recursive_e2e" + (" and not contributor_e2e" if release_smoke else "")
+        + ("" if session.env.get("DEVCAPSULE_E2E_BUILT_BASE") else " and not base_build_e2e"),
         str(PROJECT_ROOT / "tests" / "e2e"),
         env=environment,
     )
@@ -289,8 +352,20 @@ def pex_clean_machine(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def e2e(session: nox.Session) -> None:
     install_locked(session)
-    build_test_pex(session)
-    run_e2e_tests(session)
+    parser = argparse.ArgumentParser(prog="nox -s e2e --")
+    parser.add_argument("--build-base", action="store_true")
+    parser.add_argument("--build-network", choices=("default", "host", "none"), default="default")
+    options = parser.parse_args(session.posargs)
+    if options.build_network != "default" and not options.build_base:
+        session.error("--build-network requires --build-base")
+    if options.build_base and not (
+        session.env.get(PEX_UNDER_TEST_ENV) or os.environ.get(PEX_UNDER_TEST_ENV)
+    ):
+        session.error("--build-base requires DEVCAPSULE_PEX_UNDER_TEST to select a published executable")
+    release_smoke = select_e2e_pex(session)
+    if options.build_base:
+        build_e2e_base(session, network=options.build_network)
+    run_e2e_tests(session, release_smoke=release_smoke)
 
 
 @nox.session(python="3.12")
