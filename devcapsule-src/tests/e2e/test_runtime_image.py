@@ -11,6 +11,7 @@ import signal
 import subprocess
 import tarfile
 import time
+import tomllib
 import uuid
 
 import pytest
@@ -21,7 +22,9 @@ from devcapsule.container_runtime.contract import Identity, RuntimePlan
 from devcapsule.image_build import render_build_context
 from devcapsule.materialization import ArtifactSpec, ImageDetails, ensure_materialized_surface
 
-DEFAULT_BASE_IMAGE = "mycodespace.ai/pycharm:debug-v018"
+DEFAULT_BASE_IMAGE = str(tomllib.loads(
+    (Path(__file__).resolve().parents[3] / ".devcapsule/devcapsule.linux-amd64.lock").read_text()
+)["base"]["reference"])
 
 
 def command(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -52,6 +55,9 @@ def test_pex_runtime_help_inside_disposable_image(tmp_path: Path, built_pex: Pat
         f"E2E base image {base_image!r} is not available locally; pull it explicitly "
         "or set DEVCAPSULE_E2E_BASE_IMAGE"
     )
+
+    if expected_base := os.environ.get("DEVCAPSULE_E2E_BUILT_BASE"):
+        assert json.loads(inspected_base.stdout)[0]["Id"] == expected_base
 
     identifier = uuid.uuid4().hex
     image = f"devcapsule-runtime-e2e:{identifier}"

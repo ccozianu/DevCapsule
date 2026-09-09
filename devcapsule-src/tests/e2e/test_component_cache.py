@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tarfile
@@ -26,6 +27,9 @@ def docker(*args: str) -> str:
 
 @pytest.mark.e2e
 def test_installation_is_reused_across_images_and_invalidated_by_recipe(tmp_path: Path) -> None:
+    base_reference = os.environ.get("DEVCAPSULE_E2E_BASE_IMAGE", "ubuntu:24.04")
+    if expected_base := os.environ.get("DEVCAPSULE_E2E_BUILT_BASE"):
+        assert json.loads(docker("image", "inspect", base_reference))[0]["Id"] == expected_base
     token = uuid.uuid4().hex
     images = [f"devcapsule-cache-test:{token}-{index}" for index in range(3)]
     builder = BuildxImageBuilder()
@@ -48,7 +52,7 @@ def test_installation_is_reused_across_images_and_invalidated_by_recipe(tmp_path
                 ExecComponent(("sh", "-c", f"mkdir -p /opt/other && echo {index} > /opt/other/version")),
             ), ("/opt/other",))
             stages = (contribution(version), sibling) if index == 0 else (sibling, contribution(version))
-            builder.build(ImageBuildSpec(image, "ubuntu:24.04", (
+            builder.build(ImageBuildSpec(image, base_reference, (
                 *stages, FileComponent(runtime, "/runtime"),
             )), network="none")
             observed.append(docker("run", "--rm", "--network=none", image,
@@ -75,9 +79,12 @@ def test_formation_receives_exact_launcher_on_runtime_free_base(
             archive.addfile(member, io.BytesIO(data))
     image = None
     try:
-        base = json.loads(docker("image", "inspect", "ubuntu:24.04"))[0]
+        base_reference = os.environ.get("DEVCAPSULE_E2E_BASE_IMAGE", "ubuntu:24.04")
+        base = json.loads(docker("image", "inspect", base_reference))[0]
+        if expected_base := os.environ.get("DEVCAPSULE_E2E_BUILT_BASE"):
+            assert base["Id"] == expected_base
         image, created = ensure_materialized_surface(
-            base_reference="ubuntu:24.04", base_identity=base["Id"],
+            base_reference=base_reference, base_identity=base["Id"],
             platform=f"{base['Os']}-{base['Architecture']}",
             artifact=ArtifactSpec("fixture", archive_path.as_uri(),
                                   hashlib.sha256(archive_path.read_bytes()).hexdigest(),

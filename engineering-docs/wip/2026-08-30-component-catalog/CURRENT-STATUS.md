@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; RC3 published and accepted by automated evidence; final integration pending PR access
+State: active 2026-09-09; final implementation slice ready for PR #65, graphical successor exited successfully
 
 Integration target: `main`
 
@@ -12,6 +12,223 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Final Delivery Boundary (2026-09-09)
+
+Owner direction: this is the last task to deliver through this workstream.
+Freeze implementation scope. Do not resume the historical feature backlog
+below; remaining activity is PR delivery, the already-authorized v0.2.11
+promotion, and workflow finalization. The workstream is not concluded until
+those delivery obligations and its final records reach main.
+
+Integration branch: `component-catalog/antigravity-cli`, synchronized with
+fetched main. Delivery: [PR #65](https://github.com/ccozianu/devcapsule/pull/65),
+open and not draft; use the repository's PR merge policy. The source branch is
+frozen against unrelated changes. Release implementation and acceptance are
+already integrated through PR #63; workflow naming intake through PR #64.
+The remaining diff is the smoke harness, documentation, and execution evidence.
+Validation: full build (579 unit tests, one existing xfail, 9 packaging tests,
+mypy on 128 files), seven full-base Docker tests, two preliminary recursive
+tests, and the live graphical successor inspection and exit proof below.
+Later changes only record evidence and scope; no executable changes invalidate
+those results. The workstream intake contains only its README.
+
+Final tag `v0.2.11` is still absent. Promotion must tag the accepted RC3 source
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`, also the retained release-branch
+tip, rather than the smoke-harness branch tip. Recheck final publication before
+closing the workstream. Owner's "sounds good" and request for merge readiness
+accept proceeding with delivery; no specific provider-login or editor checklist
+claims are inferred from that brief response.
+
+## Graphical Recursive Successor (2026-09-09)
+
+The owner corrected the preceding execution scope: the recursive acceptance
+they requested includes a built graphical successor, manual inspection, and
+normal GUI exit producing container code 0. Their recollection is confirmed by
+the archived recursive workstream's live Stage 6 evidence and the
+2026-08-15 detached-successor cleanup bug, which recorded both historical
+successors as `Exited (0)`. The current Nox wrapper is only the preliminary
+subset; calling the graphical continuation optional was an agent scope error.
+The owner has already requested that continuation; do not ask for its scope
+authorization again.
+
+Executed the existing `recursive-e2e launch-successor` and independent
+`inspect-successor` commands through the published RC3 executable. Created an
+ownership-marked run using the existing clean-clone protocol, detached its
+scratch checkout at exact RC3 source, removed its local origin, and verified
+the clone is clean and independent. This is test-owned source, not a new
+editing workstream. Configured isolated XDG/home/IDE state and the declared
+acquisitions plus Docker/network/sudo access. The checkout explicitly authorizes
+the retained full RC3-built base; its committed v0.2.10 recommendation stays
+unchanged. No personal IDE or agent credential state was copied.
+
+Run: `8d769574856fb2b7a7e3a296c04d7188`.
+Source: `94e798f1d1a7aaab93ae3e47d9636471448a8e66`.
+Container: `devcapsule-e2e-8d769574856fb2b7a7e3a296c04d7188-successor`, ID
+`89bbff543005849e35899b7d45dabc366be754c366a55e58c3f7b5f5927ed26f`.
+Materialized image:
+`sha256:2e3b67566a8975e834caac5f80a34ef08a34c2818011e7d93a3501621e03b5df`.
+Base identity:
+`sha256:90eece0d93ab9c94265efc1ac77b363e4300d345c58761ab58bc31d20667639a`.
+Runtime PEX SHA-256:
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+
+The real component image built successfully. Independent inspection passed
+identity, exact mounts/environment/security/resource/restart settings, runtime
+plan digest and read-only mount, run ID, supervised PyCharm process, and tool
+versions (Claude 2.1.261, Codex 0.153.4, Node 22.23.1, javac 25.0.4, Maven
+3.9.16). An additional in-container version call reports `v0.2.11-rc3`; image
+labels independently confirm the new base ID and published executable checksum.
+
+Retained run root is beneath the current capsule's
+`~/.local/share/devcapsule/e2e-workspaces/`, named by the run ID. It contains
+the ownership marker, `milestone-manifest.json`, `expected-plan.json`,
+`candidate-inspection.json`, `candidate-launch.log`, and
+`candidate-command.py`. The last file invokes the retained release executable
+with the run's isolated configuration, allowing repeat inspection. Its checkout,
+state and staging must remain while the GUI is running. Temporary monitoring:
+`docker wait` writes `/tmp/devcapsule-rc3-successor-exit-code`.
+
+Completion recheck: Docker records this exact successor as `exited`, code `0`,
+`OOMKilled=false`, finished `2026-09-09T22:08:19.014764095Z`; the independent
+`docker wait` observer also returned `0`. The owner then said "sounds good"
+and asked to proceed to merge readiness. This proves normal graphical-session
+termination; no agent stop/kill was used. The stopped container and owned run
+remain as inspection evidence, and historical runs/control capsule are untouched.
+
+**Planned next step:** merge PR #65, complete final release promotion, then
+finalize the workstream under the owner's final-task scope cutoff above.
+
+## Recursive Suite Execution (2026-09-09)
+
+At the owner's request, ran the existing recursive suite from clean source
+`b93b5e193cbb7808f701a9278474c0dfa72e6e5b` after confirming the branch already
+contains fetched main. The current capsule passed Docker, host-network,
+persistent-home, runtime-plan, and X11 authorization preflight.
+
+```text
+cd devcapsule-src
+.venv/bin/python -m nox -s recursive_dogfood_e2e
+```
+
+Result: **2 passed, 7 deselected in 44.82 seconds**; Nox completed successfully
+in 48 seconds. This executes source CLI planning, an isolated contributor
+bootstrap, and the recursive clean-local-clone protocol. The clone test verifies
+the current capsule's embedded PEX against its image provenance independently
+of the selected source revision. Contributor bootstrap uses the actual base
+under the current running capsule, not the new candidate base retained below.
+
+Also invoked the checksum-verified published RC3 executable directly for
+`project --path . recursive-e2e preflight --json` and `recursive-e2e run --json`.
+Both passed. The image-revision warning correctly distinguishes the RC3 caller
+from the older running capsule. The RC3 planning run
+`1dbf3d31aa891c761324c1c4b97ee69c` and source planning run
+`7c19ec360726b7052d1755d32ac74de7` report cleanup complete; their staging
+directories were independently confirmed absent. Contributor run
+`a74003586f14b0abef25fca7f3b688ee` also removed its exact container and workspace.
+Local logs: `/tmp/devcapsule-rc3-recursive-nox.log` and
+`/tmp/devcapsule-rc3-recursive-dry-run.json`.
+
+Scope limitation: the current public `recursive-e2e run` implements a dry run;
+the Nox wrapper adds the two tests above. Neither orchestrates successor building
+or launch. No new successor IDE, GUI acceptance, or full recursive lifecycle
+acceptance is claimed. The earlier full candidate-base smoke remains separate
+evidence. No implementation changes were needed to execute this suite.
+
+The original optional-scope question is superseded by the owner's correction
+and the graphical successor execution recorded above.
+
+## Full Candidate Base Smoke (2026-09-09)
+
+The owner corrected the previous smoke scope: it had tested the RC3 executable
+against an existing base, not built a candidate base. Added `--build-base` to
+`nox -s e2e`, requiring an explicitly selected published PEX. Nox invokes that
+executable's actual `images build --type base --recipe ubuntu-24.04` with its
+embedded public source revision; it does not call the source tree's builder or
+use the fixture's `install_baseline=False` as a substitute for the full recipe.
+
+Validation completed using the existing checksum-verified RC3 download:
+
+```text
+cd devcapsule-src
+DEVCAPSULE_PEX_UNDER_TEST="$PWD/dist/releases/v0.2.11-rc3/devcapsule.pex" \
+  .venv/bin/python -m nox -s e2e -- --build-base --build-network host
+```
+
+Final retained local base:
+`devcapsule-base-e2e:v0.2.11-rc3-3e30c6c81a91`, image ID
+`sha256:90eece0d93ab9c94265efc1ac77b363e4300d345c58761ab58bc31d20667639a`.
+Builder: RC3 source `94e798f1d1a7aaab93ae3e47d9636471448a8e66`, executable SHA-256
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+`dist/e2e-base-build.json` contains the latest local build's identity record.
+This is a locally retained test base, not a Docker Hub publication or a lock repin.
+
+The build executed recipe 7 from Ubuntu 24.04, including OS packages and the
+real Node 22.23.1, Temurin 25.0.4+7 and Maven 3.9.16 contributions. The first
+successful build installed Node in 18.3s, Temurin in 36.1s and Maven in 4.7s;
+Temurin was installed once and copied to both Maven's stage and the final image.
+The final rerun used cached installation stages. BuildKit's existing OS baseline
+cache was reused; this was not claimed as a cold, cache-free build.
+
+Seven Docker tests passed in 114.52s: full-base provenance/tool/agent-absence/
+runtime-absence checks, component cache reuse, both fixture IDE surfaces on the
+new base, unexpected container removal, supervisor sessions, and the separate
+plain-Ubuntu no-Python/no-network proof. Build contexts use the unique owned tag
+and verify its image ID first; Dockerfile FROM cannot use the raw `sha256:` image
+ID spelling. The lifecycle/base inspection paths use the recorded image ID.
+Full Nox build passed: 579 unit tests, one existing xfail, 9 packaging integration
+tests and mypy on 128 files. No real GUI/login smoke is claimed.
+
+Environment finding: the default Docker bridge cannot resolve Ubuntu repositories
+on this host, while an explicit host-network probe succeeds. The stalled default
+build was canceled and the new `--build-network host` option used explicitly.
+It changes the build network only; runtime smoke containers retain their settings.
+An initial full-base smoke exposed the Dockerfile image-ID spelling error, now
+fixed. The earlier successful build is also retained locally at
+`devcapsule-base-e2e:v0.2.11-rc3-8442dbf371f6` for inspection.
+
+**Planned next step:** review/integrate the smoke-harness changes, then continue
+final promotion at the accepted RC3 source commit. Candidate executable/tag and
+release branch remain unchanged. The previous six-case mode remains available
+without `--build-base` and is documented as existing-base compatibility only.
+
+## Published Executable Smoke Follow-up (2026-09-09)
+
+The owner requested adapting and running the existing E2E smoke suite against
+the GitHub-published `v0.2.11-rc3` executable. Selected `nox -s e2e` as the Docker
+smoke suite; the optional clarification about the longer recursive dogfood test
+received no answer during this slice, so that scope was retained.
+
+Remote state reverified: PR #63 merged the release implementation/acceptance and
+PR #64 delivered the workflow naming intake. This branch was fast-forwarded to
+fetched main `857035a` before editing. The previous PR-delivery blocker and next
+steps in the historical checkpoint below are superseded by those merges.
+
+`DEVCAPSULE_PEX_UNDER_TEST` now selects an existing executable without building a
+local replacement. Nox reports its mnemonic, source and SHA-256, derives version
+assertions, and rejects explicitly supplied expectations that disagree. This mode
+runs six Docker smoke cases; contributor source-bootstrap and recursive dogfood
+retain their separate paths. The ordinary local-build mode is preserved. The
+removed-container test copies the selected PEX into its disposable container and
+checks its checksum and identity, so it cannot accidentally test the old base
+runtime. The runtime test defaults to the committed base pin instead of debug-v018.
+Download/verification and invocation are documented in `devcapsule-src/README.md`.
+
+Freshly downloaded artifact:
+`devcapsule-src/dist/releases/v0.2.11-rc3/devcapsule.pex`, source
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`, SHA-256
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+Both the published checksum and release manifest were checked. All six selected
+E2E tests passed (105.98 seconds): contribution-cache reuse, both fixture surfaces,
+unexpected removal, supervisor sessions, and no-Python/no-network execution.
+Full Nox build passed: 577 unit tests, one existing xfail, 9 packaging integration
+tests, and mypy on 127 files. No GUI/login or successor-workspace smoke is claimed.
+
+**Planned next step:** review/integrate this test-harness slice, then continue the
+existing final-promotion task using RC3's exact commit. The executable, candidate
+tag and release branch are unchanged; these are harness/documentation changes.
+The accepted source and promotion record are already on main. Final tagging was
+not part of this smoke-test execution; recheck remote state before promotion.
 
 ## Current Release Experiment (2026-09-09)
 
@@ -818,13 +1035,33 @@ its ruling thread open):
 
 ## Open Threads
 
-- v0.2.11 final remains pending PR delivery. RC3 is the accepted candidate;
+- The graphical recursive successor passed inspection and exited normally with
+  code 0 and no OOM. Owner requested merge readiness and declared this the last
+  task for the workstream. Only delivery, final release promotion and closure
+  remain; historical feature threads below are not authorization for more work.
+  This run's stopped container and support files remain as evidence; preliminary
+  test resources were cleaned.
+
+- The full-base coverage correction is complete: RC3's own builder produced a
+  local recipe-7 base and all seven tests passed. Retained image references and
+  exact identity are recorded above. No Docker Hub base publication, lock repin,
+  final release tag or GUI/provider acceptance was performed by this smoke task.
+  Keep the release candidate frozen while reviewing the test harness separately.
+
+- The downloaded-RC3 smoke request is complete: six Docker cases passed and
+  the contributor/recursive source paths were explicitly excluded in executable
+  mode. The artifact path above is an ignored download cache, not a new source
+  artifact. PR #63/#64 resolved the prior integration/intake delivery blockers;
+  older statements about those PRs below are historical. The new harness slice
+  remains on the selected working branch for review. No release tag was moved.
+
+- v0.2.11 final promotion remains pending. RC3 is the accepted candidate;
   RC0 failed before staging, RC1 retains a fully verified draft after publication
   lookup failure, and RC2 is a published prerelease superseded by RC3's packaging
   pins. Keep their tags/assets unchanged. Re-verify remote PR, main, tag, release
   and Latest state on resume. No credentials were changed and no main integration
-  exception is claimed. The intake on `component-catalog/outbox` remains undelivered
-  until its separate PR reaches main. Everything required for the next step is
+  exception is claimed. PR #63 integrated source/acceptance and PR #64 delivered
+  the workflow intake; PR #65 carries the final smoke slice. Everything required for the next step is
   committed; temporary local build/proof artifacts are reproducible and not records.
 
 - **One base family, named plainly** (owner direction 2026-09-06,
