@@ -11,6 +11,7 @@ import signal
 import subprocess
 import tarfile
 import time
+import tomllib
 import uuid
 
 import pytest
@@ -21,7 +22,9 @@ from devcapsule.container_runtime.contract import Identity, RuntimePlan
 from devcapsule.image_build import render_build_context
 from devcapsule.materialization import ArtifactSpec, ImageDetails, ensure_materialized_surface
 
-DEFAULT_BASE_IMAGE = "mycodespace.ai/pycharm:debug-v018"
+DEFAULT_BASE_IMAGE = str(tomllib.loads(
+    (Path(__file__).resolve().parents[3] / ".devcapsule/devcapsule.linux-amd64.lock").read_text()
+)["base"]["reference"])
 
 
 def command(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:

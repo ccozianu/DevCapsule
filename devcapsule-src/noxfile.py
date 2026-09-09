@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import json
+import hashlib
 from pathlib import Path
 
 import nox
@@ -58,15 +60,42 @@ def run_packaging_tests(session: nox.Session) -> None:
     )
 
 
-def run_e2e_tests(session: nox.Session) -> None:
+def select_e2e_pex(session: nox.Session) -> bool:
+    """Use an explicitly selected executable, or build the local smoke artifact."""
+    selected = session.env.get(PEX_UNDER_TEST_ENV) or os.environ.get(PEX_UNDER_TEST_ENV)
+    if not selected:
+        build_test_pex(session)
+        return False
+    path = Path(selected).expanduser().resolve(strict=True)
+    output = session.run(str(path), "version", "--json", external=True, silent=True)
+    assert isinstance(output, str), "Selected PEX must report its build identity"
+    identity = json.loads(output)
+    for name, key in (("DEVCAPSULE_EXPECTED_RELEASE_VERSION", "version"),
+                      ("DEVCAPSULE_EXPECTED_BUILD_MNEMONIC", "build_mnemonic")):
+        actual = identity[key]
+        expected = session.env.get(name) or os.environ.get(name)
+        if expected and expected != actual:
+            session.error(f"Selected PEX {key} is {actual!r}, expected {expected!r}")
+        session.env[name] = actual
+    session.env[PEX_UNDER_TEST_ENV] = str(path)
+    with path.open("rb") as stream:
+        checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+    session.log(f"E2E executable: {path}; {identity['build_mnemonic']}; source {identity['source_revision']}; sha256 {checksum}")
+    return True
+
+
+def run_e2e_tests(session: nox.Session, *, release_smoke: bool = False) -> None:
     environment: dict[str, str] = {}
     for name in (
         "DEVCAPSULE_E2E_BASE_IMAGE",
         "DEVCAPSULE_EARLY_EXIT_E2E_IMAGE",
         "DEVCAPSULE_CONTRIBUTOR_E2E_IMAGE",
         "DEVCAPSULE_PEX_CLEAN_MACHINE_IMAGE",
+        PEX_UNDER_TEST_ENV,
+        "DEVCAPSULE_EXPECTED_RELEASE_VERSION",
+        "DEVCAPSULE_EXPECTED_BUILD_MNEMONIC",
     ):
-        value = session.env.get(name)
+        value = session.env.get(name) or os.environ.get(name)
         if value is not None:
             environment[name] = value
     session.run(
@@ -75,7 +104,7 @@ def run_e2e_tests(session: nox.Session) -> None:
         "pytest",
         "--no-cov",
         "-m",
-        "e2e and not recursive_e2e",
+        "e2e and not recursive_e2e" + (" and not contributor_e2e" if release_smoke else ""),
         str(PROJECT_ROOT / "tests" / "e2e"),
         env=environment,
     )
@@ -289,8 +318,8 @@ def pex_clean_machine(session: nox.Session) -> None:
 @nox.session(python="3.12")
 def e2e(session: nox.Session) -> None:
     install_locked(session)
-    build_test_pex(session)
-    run_e2e_tests(session)
+    release_smoke = select_e2e_pex(session)
+    run_e2e_tests(session, release_smoke=release_smoke)
 
 
 @nox.session(python="3.12")

@@ -72,7 +72,7 @@ def runtime_plan() -> dict[str, object]:
 
 
 @pytest.mark.e2e
-def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path) -> None:
+def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path, built_pex: Path) -> None:
     """A real DevCapsule removed behind the launcher's back cannot inspect as healthy."""
 
     docker = shutil.which("docker")
@@ -85,10 +85,6 @@ def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path) -> Non
         "DEVCAPSULE_EARLY_EXIT_E2E_IMAGE"
     )
     image_inspection = json.loads(image_result.stdout)[0]
-    assert image_inspection["Config"]["Entrypoint"][-2:] == [
-        "/opt/devcapsule/bin/devcapsule.pex",
-        "runtime",
-    ]
 
     run_id = uuid.uuid4().hex
     name = successor_container_name(run_id)
@@ -102,7 +98,10 @@ def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path) -> Non
     create_args.extend(("--env", f"DEVCAPSULE_RUN_ID={run_id}"))
     for label, value in ownership.items():
         create_args.extend(("--label", f"{label}={value}"))
-    create_args.extend((image, "/tmp/devcapsule-e2e-runtime-plan.json"))
+    # Exercise the selected release even if the base embeds an older runtime
+    # (or, with recipe 7, no runtime at all). Docker cp works across host sockets.
+    create_args.extend(("--entrypoint", "/tmp/devcapsule-e2e.pex", image,
+                        "runtime", "/tmp/devcapsule-e2e-runtime-plan.json"))
     created = command(*create_args)
     container_id = created.stdout.strip()
     assert len(container_id) == 64
@@ -114,6 +113,7 @@ def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path) -> Non
     launcher_path.chmod(0o755)
     removed = False
     try:
+        command(docker, "cp", str(built_pex), f"{container_id}:/tmp/devcapsule-e2e.pex")
         command(
             docker,
             "cp",
@@ -124,6 +124,10 @@ def test_externally_removed_capsule_is_reported_as_failed(tmp_path: Path) -> Non
         command(docker, "start", container_id)
         reflected_run_id = command(docker, "exec", container_id, "printenv", "DEVCAPSULE_RUN_ID")
         assert reflected_run_id.stdout.strip() == run_id
+        copied_digest = command(docker, "exec", container_id, "sha256sum", "/tmp/devcapsule-e2e.pex").stdout.split()[0]
+        assert copied_digest == hashlib.sha256(built_pex.read_bytes()).hexdigest()
+        copied_identity = json.loads(command(docker, "exec", container_id, "/tmp/devcapsule-e2e.pex", "version", "--json").stdout)
+        assert copied_identity == json.loads(command(str(built_pex), "version", "--json").stdout)
         running = command(docker, "inspect", "--format", "{{.State.Running}}", container_id)
         if running.stdout.strip() != "true":
             logs = command(docker, "logs", container_id, check=False)

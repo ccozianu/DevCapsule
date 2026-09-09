@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; RC3 published and accepted by automated evidence; final integration pending PR access
+State: active 2026-09-09; release implementation integrated; downloaded RC3 passed the adapted Docker smoke suite
 
 Integration target: `main`
 
@@ -12,6 +12,44 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Published Executable Smoke Follow-up (2026-09-09)
+
+The owner requested adapting and running the existing E2E smoke suite against
+the GitHub-published `v0.2.11-rc3` executable. Selected `nox -s e2e` as the Docker
+smoke suite; the optional clarification about the longer recursive dogfood test
+received no answer during this slice, so that scope was retained.
+
+Remote state reverified: PR #63 merged the release implementation/acceptance and
+PR #64 delivered the workflow naming intake. This branch was fast-forwarded to
+fetched main `857035a` before editing. The previous PR-delivery blocker and next
+steps in the historical checkpoint below are superseded by those merges.
+
+`DEVCAPSULE_PEX_UNDER_TEST` now selects an existing executable without building a
+local replacement. Nox reports its mnemonic, source and SHA-256, derives version
+assertions, and rejects explicitly supplied expectations that disagree. This mode
+runs six Docker smoke cases; contributor source-bootstrap and recursive dogfood
+retain their separate paths. The ordinary local-build mode is preserved. The
+removed-container test copies the selected PEX into its disposable container and
+checks its checksum and identity, so it cannot accidentally test the old base
+runtime. The runtime test defaults to the committed base pin instead of debug-v018.
+Download/verification and invocation are documented in `devcapsule-src/README.md`.
+
+Freshly downloaded artifact:
+`devcapsule-src/dist/releases/v0.2.11-rc3/devcapsule.pex`, source
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`, SHA-256
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+Both the published checksum and release manifest were checked. All six selected
+E2E tests passed (105.98 seconds): contribution-cache reuse, both fixture surfaces,
+unexpected removal, supervisor sessions, and no-Python/no-network execution.
+Full Nox build passed: 577 unit tests, one existing xfail, 9 packaging integration
+tests, and mypy on 127 files. No GUI/login or successor-workspace smoke is claimed.
+
+**Planned next step:** review/integrate this test-harness slice, then continue the
+existing final-promotion task using RC3's exact commit. The executable, candidate
+tag and release branch are unchanged; these are harness/documentation changes.
+The accepted source and promotion record are already on main. Final tagging was
+not part of this smoke-test execution; recheck remote state before promotion.
 
 ## Current Release Experiment (2026-09-09)
 
@@ -817,6 +855,13 @@ its ruling thread open):
    of the checkout-local need once it exists.
 
 ## Open Threads
+
+- The downloaded-RC3 smoke request is complete: six Docker cases passed and
+  the contributor/recursive source paths were explicitly excluded in executable
+  mode. The artifact path above is an ignored download cache, not a new source
+  artifact. PR #63/#64 resolved the prior integration/intake delivery blockers;
+  older statements about those PRs below are historical. The new harness slice
+  remains on the selected working branch for review. No release tag was moved.
 
 - v0.2.11 final remains pending PR delivery. RC3 is the accepted candidate;
   RC0 failed before staging, RC1 retains a fully verified draft after publication

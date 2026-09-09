@@ -252,6 +252,40 @@ chmod 0755 devcapsule.pex
 ./devcapsule.pex version --json
 ```
 
+To run the existing Docker E2E smoke suite against a published executable:
+
+```bash
+cd devcapsule-src # from the repository root
+release_tag=v0.2.11-rc3
+release_dir="$PWD/dist/releases/$release_tag"
+mkdir -p "$release_dir"
+for asset in devcapsule.pex devcapsule.pex.sha256 release-manifest.json; do
+  curl --fail --location --output "$release_dir/$asset" \
+    "https://github.com/ccozianu/devcapsule/releases/download/$release_tag/$asset" || exit 1
+done
+(cd "$release_dir" && sha256sum --check devcapsule.pex.sha256) || exit 1
+chmod 0755 "$release_dir/devcapsule.pex"
+DEVCAPSULE_PEX_UNDER_TEST="$release_dir/devcapsule.pex" \
+DEVCAPSULE_EXPECTED_BUILD_MNEMONIC="$release_tag" \
+  .venv/bin/python -m nox -s e2e
+```
+
+Pull `ubuntu:24.04` and the base reference in the checkout's platform lock before
+running; the smoke suite requires those images to be available locally. The
+runtime test accepts `DEVCAPSULE_E2E_BASE_IMAGE`, and the removed-container test
+accepts `DEVCAPSULE_EARLY_EXIT_E2E_IMAGE` for explicit base overrides.
+
+With `DEVCAPSULE_PEX_UNDER_TEST` set, Nox uses that executable without rebuilding
+it, reports its source identity and SHA-256, and derives release-version assertions
+from it. Explicit expected version/mnemonic values still fail on a mismatch.
+The six smoke cases cover component cache reuse, PEX delivery to both fixture IDE
+surfaces, supervisor sessions, unexpected container removal, and execution without
+host Python or networking. The removal test also copies and verifies the selected
+PEX, independent of any runtime inherited from the base. Source contributor
+bootstrap and recursive dogfood retain their separate validation paths; they are
+excluded from the selected-executable smoke run. Without the selection variable,
+`nox -s e2e` retains its local build and contributor-bootstrap behavior.
+
 The GitHub backend owns release construction. Pushing `v0.2.11-rc0` on
 `release-0.2.11` runs source, packaging, clean-machine, component-cache and
 runtime-session gates, then publishes download-verified assets as a prerelease.
