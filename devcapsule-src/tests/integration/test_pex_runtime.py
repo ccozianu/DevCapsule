@@ -241,9 +241,13 @@ def test_clean_revision_build_and_tag_derived_version(tmp_path: Path, release: s
         subprocess.run(["git", "-C", str(repository), "config",
                         f"url.{remote}.insteadOf",
                         "https://github.com/example/devcapsule-unpublished-test.git"], check=True)
-        subprocess.run(["git", "-C", str(repository), "tag", release], check=True)
+        subprocess.run(["git", "-C", str(repository), "tag", "-a", "-m", "Candidate", release], check=True)
         subprocess.run(["git", "-C", str(repository), "push", "origin", release], check=True,
                        capture_output=True)
+        # Enough advertised refs to expose an early-exiting grep under pipefail.
+        subprocess.run(["git", "--git-dir", str(remote), "update-ref", "--stdin"],
+                       input="".join(f"create refs/heads/fixture-{index} {revision}\n" for index in range(500)),
+                       text=True, check=True, capture_output=True)
         build_arguments = ["--release-mnemonic", release, "--source-repository",
                            "https://github.com/example/devcapsule-unpublished-test"]
     build_environment = {

@@ -40,8 +40,14 @@ acceptance-record helper. Final source must remain exactly the accepted RC SHA.
 
 Validation so far: full Nox build passed with 574 unit tests, one existing xfail,
 9 packaging integration tests (including a real RC PEX), and type checks.
-Actionlint passed. Candidate publication and final integration remain next;
-no v0.2.11 tag has yet been created at this checkpoint.
+Actionlint passed. `release-0.2.11` and immutable `v0.2.11-rc0` were pushed at
+`04c1e935552c17ff7c262caf81573e6cd272060a`. The [RC0 run](https://github.com/ccozianu/devcapsule/actions/runs/34332187735)
+failed before publication: early-exiting grep caused cut's SIGPIPE under pipefail,
+falsely rejecting a public revision. The fix drains the pipeline; packaging tests
+now advertise 500 refs and use annotated release tags. Inspection also found and
+fixed the clean-machine test's source-baseline version assumption. Next candidate
+is `v0.2.11-rc1`; RC0 stays unchanged. Preparation baseline is
+`3f028eeb97d7de6bce5b9f2ac2faf0a1b940cb61`.
 
 ## Previous Implementation Checkpoint (2026-09-08)
 

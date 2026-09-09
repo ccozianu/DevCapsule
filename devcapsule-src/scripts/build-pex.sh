@@ -228,7 +228,7 @@ if [[ ${allow_local_source} -eq 0 ]]; then
     exit 1
   fi
   if [[ ${allow_unpublished_revision} -eq 0 ]] && \
-    ! git ls-remote "${source_repository}.git" 2>/dev/null | cut -f1 | grep -Fqx "${source_revision}"; then
+    ! git ls-remote "${source_repository}.git" 2>/dev/null | cut -f1 | grep -Fx "${source_revision}" >/dev/null; then
     echo "scripts/build-pex.sh: source revision is not advertised by the public GitHub repository" >&2
     exit 1
   fi
