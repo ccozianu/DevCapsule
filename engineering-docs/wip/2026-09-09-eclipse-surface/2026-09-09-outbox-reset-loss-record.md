@@ -1,4 +1,4 @@
-# Custody Record: A Fourth Outbox-Reset Loss, Caught Before It Happened
+# Custody Record: Two Live Outbox-Reset Losses, Caught Before They Happened
 
 Written 2026-09-09 by `eclipse-surface` at the product owner's explicit
 direction, while opening this workstream.
@@ -20,6 +20,11 @@ never reached `main`. Performing the prescribed reset would have destroyed it.
 
 The full content of that item is reproduced verbatim in *Appendix A* below, so
 that it survives even if every branch carrying it is deleted.
+
+Auditing the other four outboxes afterwards found a second live one, stranded
+since 2026-08-17 on `workflow-improvements/outbox`. It is reproduced verbatim in
+*Appendix B*. It has survived only because its sender has been idle; the next
+send from that workstream destroys it.
 
 ## The Mechanism, Stated Plainly
 
@@ -88,14 +93,17 @@ question is open.
 
 ## The Recorded Occurrences
 
-Four, of which this is the first caught before the damage.
+Five, of which the last two are the first ever caught before the damage. Both
+survive only because their senders are paused, which is luck rather than
+protocol.
 
 | # | Item | Sender | Stranded | Fate |
 |---|---|---|---|---|
 | 1 | `2026-08-16-project-management-v026-deliverables.md` (two v026 items) | `project-management` | 2026-08-16 | Sat undelivered; landed only via `PR #25`. Resend was recommended and still did not arrive. |
 | 2 | `2026-08-17-recursive-e2e-audit-undelivered-work.md` at `ebad342` | `recursive-e2e` | 2026-08-17 | Orphaned by a later reset; recovered and delivered 2026-08-27 via `PR #43`. Self-demonstrating: the audit asking about the failure was destroyed by the failure. |
 | 3 | `2026-09-06-component-catalog-one-devcapsule-inside-and-outside.md` at `802adaf` | `component-catalog` | ~2026-09-07 | Destroyed. Not recoverable; **reconstructed** on 2026-09-08 in `2c1113e`, and the sender's two non-preferred design shapes "survived nowhere." |
-| 4 | The `2026-08-19` amendment at `b1f7273` (see Appendix A) | `project-management` | 2026-08-19 | **Still intact on `origin/project-management/outbox`.** Caught 2026-09-09 before the reset. Recoverable verbatim. |
+| 4 | The `2026-08-19` amendment at `b1f7273` (Appendix A) | `project-management` | 2026-08-19 | **Was still intact**, caught 2026-09-09 immediately before the reset that would have destroyed it. Preserved verbatim here and on `project-management/outbox-pending-2026-08-19`. |
+| 5 | `2026-08-17-workflow-improvements-obsolete-intake-readmes.md` at `19daa31` (Appendix B) | `workflow-improvements` | 2026-08-17 | **Still intact on `origin/workflow-improvements/outbox`.** Found 2026-09-09 by the audit. Alive only because that workstream is open-idle and has not sent since; its next send destroys it. |
 
 Occurrence 3 was known to be permitted and was left standing deliberately:
 prevention is protocol content, `workflow-improvements` owns it, and
@@ -104,6 +112,7 @@ is a defensible call, but the ledger now reads four losses in three weeks, one
 of them a ratified decision.
 
 ## Why Occurrence 4 Is The Serious One
+
 
 The other three were work items and arguments. This one contains **a ratified
 product-owner decision** that has been invisible to the project for 21 days.
@@ -136,6 +145,64 @@ That last clause is why this record matters beyond bookkeeping. The mechanism
 described above is a property of the outbox, and a ratified decision that may
 abolish the outbox has itself been trapped by the outbox for three weeks.
 
+## Occurrence 5: What The Audit Found
+
+`19daa31`, "Route obsolete intake README cleanup", pushed 2026-08-17 on
+`workflow-improvements/outbox`. It adds one intake item for
+`project-management`, sent at the product owner's direction, asking it to route
+the cleanup of three workstream-local `intake/README.md` files that repeat
+protocol text the current workflow has superseded.
+
+Verified 2026-09-09 against `main` at `857035a`: the filename is in no tree on
+`main`, appears in no disposition log anywhere under `engineering-docs/`, and
+exists on no ref except that branch. So it is neither delivered nor
+dispositioned — invisible to its recipient and, by the disposition-log
+invariant, not even detectable as missing.
+
+It is a smaller item than occurrence 4, and its substance may well be stale
+after three weeks: `workflow-improvements` has since pointed its own
+`intake/README.md` at `WORKFLOW.md` instead of restating it, so part of the
+cleanup it asks for may already be done. Staleness is the recipient's
+judgement, not a reason for the item to have vanished. It is recorded here
+because a silently destroyed message is a protocol failure whether or not
+anyone would still have acted on it.
+
+## The Check That Found It
+
+Ancestry cannot answer this — a delivered outbox is a non-ancestor of `main`
+under squash and rebase merges, which is exactly what made the reset
+unconditional in the first place. But content can. The outbox added specific
+files; if `main` already has them, the send landed.
+
+```sh
+base=$(git merge-base "$ref" origin/main)
+git diff --diff-filter=A --name-only "$base" "$ref" | while read -r f; do
+  git cat-file -e "origin/main:$f" 2>/dev/null || echo "MISSING: $f"
+done
+```
+
+Run against all five outboxes on 2026-09-09 at `main` `857035a`:
+
+| Outbox | Result |
+|---|---|
+| `project-management/outbox` | occurrence 4 (before the reset) |
+| `workflow-improvements/outbox` | **occurrence 5** |
+| `contained-display/outbox` | clean — its `supervisor-core-design.md` is on `main` |
+| `sample-projects/outbox` | clean |
+| `component-catalog/outbox` | clean — nothing pending |
+
+One caveat, learned by getting it wrong first: restrict the comparison to files
+the outbox **added**. Comparing *modified* shared files — root
+`CURRENT-STATUS.md` above all — reports every outbox as holding unreceived mail,
+because `main` legitimately moves on after a delivery lands. Added files are the
+reliable signal, and intake items are always added files.
+
+This is a guard, not a cure. It tells a sender to stop; it does not say what to
+do instead. The cure is the one `project-management` already stated on
+2026-08-29: the exposure "ends structurally only when a send stops implying a
+reset while unreceived mail exists" — carry the pending commits onto the new
+base, or refuse the send until the open pull request lands.
+
 ## What Was Done, And What Was Not
 
 Done: the item's full content is preserved verbatim in Appendix A, inside a
@@ -152,10 +219,10 @@ Not done, and left to the owner:
 - **Fixing the protocol.** `workflow-improvements` owns it. The 2026-08-29
   finding already states the shape of the fix: the exposure "ends structurally
   only when a send stops implying a reset while unreceived mail exists."
-- **Auditing the other four outboxes** (`contained-display`, `sample-projects`,
-  `workflow-improvements`, `component-catalog`) for the same condition. Only
-  `project-management/outbox` was examined, and only because this registration
-  had to travel it.
+- **Recovering occurrence 5.** Its content is safe here, but it is still
+  undelivered: it belongs in `project-management`'s intake, and only
+  `workflow-improvements` can send it. That workstream is open-idle with seven
+  items already waiting.
 
 ---
 
@@ -394,3 +461,69 @@ home is `engineering-docs/wip/2026-08-09-workflow-improvements/intake/`.
 > argument is expected and welcome, and the shape is yours; the boundary in *The
 > Ratified Boundary* is the product owner's and is not open on the same terms.
 > Raise it with him if you judge that premise wrong.
+
+---
+
+# Appendix B: `2026-08-17-workflow-improvements-obsolete-intake-readmes.md`
+
+Reproduced verbatim from `origin/workflow-improvements/outbox` at `19daa31`
+("Route obsolete intake README cleanup", 2026-08-17), which has never reached
+`main`. This is a custody copy, not a delivery: the item's real home is
+`engineering-docs/wip/2026-08-09-project-management/intake/`, and only
+`workflow-improvements` can send it there.
+
+> # Intake: Retire Obsolete Intake README Boilerplate
+>
+> Delivered: 2026-08-17
+>
+> From: `workflow-improvements`, at the product owner's direction.
+>
+> ## What Is Being Handed Over
+>
+> Three workstream-local `intake/README.md` files repeat protocol text that the
+> current workflow has superseded:
+>
+> - `engineering-docs/wip/2026-08-06-recursive-e2e/intake/README.md`
+> - `engineering-docs/wip/2026-08-09-project-management/intake/README.md`
+> - `engineering-docs/wip/2026-08-14-sample-projects/intake/README.md`
+>
+> The product owner considers these files obsolete for the purpose of the
+> `workflow-improvements` workstream. That workstream should not clean up files
+> inside three other workstreams merely because it found the duplication. Route
+> their replacement, removal, or other disposition to an appropriate owner.
+>
+> ## Why It Belongs Here
+>
+> This is now a cross-workstream maintenance and ownership question, not an open
+> workflow-protocol design question. `project-management` owns routing and
+> lifecycle decisions, while `workflow-improvements` remains open but paused
+> after publishing the corrections it has completed.
+>
+> ## Evidence
+>
+> All three files still say that intake items are "accepted, deferred, or
+> rejected", that senders deliver them "to `main` promptly", and that recipients
+> record the disposition only in their handoff before removing the file. Those
+> statements duplicate protocol and are now stale:
+>
+> - disposition has exactly two outcomes, acknowledge or forward; deferral is
+>   not a third outcome;
+> - senders deliver through their own `<mnemonic>/outbox` branch;
+> - disposition also writes `intake-dispositions.md` in the same outbox commit
+>   that deletes the item from `main`;
+> - intake gates workstream completion; and
+> - items from `project-management` cannot be forwarded.
+>
+> `workflow-improvements/intake/README.md` already points to `WORKFLOW.md` as the
+> authority rather than attempting to carry a complete local copy. `WORKFLOW.md`
+> remains the normative source for the intake and outbox protocols.
+>
+> ## What Accepting Would Mean
+>
+> Decide who removes or replaces the three obsolete files, or explicitly decide
+> that they should remain with a clear non-normative purpose. If they are kept,
+> make them thin pointers to `WORKFLOW.md` so future protocol changes do not
+> require synchronized edits across every open workstream.
+>
+> Priority, sequencing, and whether this is assigned to existing workstreams or
+> made separate maintenance work are `project-management` decisions.
