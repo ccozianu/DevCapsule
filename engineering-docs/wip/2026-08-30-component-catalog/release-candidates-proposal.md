@@ -1,7 +1,8 @@
 # Release Candidates And Maintenance Branches
 
-Status: accepted by the owner, 2026-09-09; implementation and first release
-experiment in progress. `release-V` is used from candidate preparation onward.
+Status: accepted and implemented, 2026-09-09. RC3 passed the full backend and
+is published as a prerelease; final promotion awaits main integration. `release-V`
+is used from candidate preparation onward. See the handoff for exact evidence.
 
 ## Owner's Requested Direction
 

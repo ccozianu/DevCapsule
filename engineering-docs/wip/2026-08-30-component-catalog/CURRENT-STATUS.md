@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-08; owner-authorized v0.2.11 release simplification and component build reuse
+State: active 2026-09-09; RC3 published and accepted by automated evidence; final integration pending PR access
 
 Integration target: `main`
 
@@ -15,11 +15,30 @@ Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
 
 ## Current Release Experiment (2026-09-09)
 
-Owner accepted the [candidate protocol](release-candidates-proposal.md) and
-explicitly authorized implementing and exercising it for v0.2.11. Next step:
-validate the new gates, publish `v0.2.11-rc0` on `release-0.2.11`, accept exact
-candidate smoke/E2E evidence, integrate through a PR, then publish the final tag
-at that same source commit. No GUI/login smoke is claimed by automation.
+Owner accepted and authorized the [candidate protocol](release-candidates-proposal.md).
+**Current checkpoint:** `v0.2.11-rc3` is published as a prerelease at source
+`94e798f1d1a7aaab93ae3e47d9636471448a8e66`, also the retained
+`release-0.2.11` tip. [Run 34333414510](https://github.com/ccozianu/devcapsule/actions/runs/34333414510)
+passed every source, packaging, Docker, staged-byte and downloaded-PEX gate.
+The downloaded PEX SHA-256 is
+`32f900903d8a1286c62aae72b0d8e71a3e6a25e68d91fae8464595da472bd6e6`.
+Local checksum and manifest recovery verification passed. GitHub Latest remains
+`v0.2.10`; **no final v0.2.11 tag or stable release exists**.
+
+Acceptance is recorded in `engineering-docs/releases/v0.2.11.json`, generated
+from the published candidate with the helper. It accepts automated release/build
+validation under the owner's operator authorization; no new GUI/login or provider
+acceptance is claimed. The component combination was already on main through
+PR #62; this slice changes release machinery and pins its packaging backend.
+
+**Planned next step:** deliver the intake-only outbox and the implementation plus
+acceptance record through PRs. GitHub connector creation is denied with HTTP 403;
+Git SSH pushes work. Once main contains the accepted source (or reviewed mapping)
+and the record, tag `v0.2.11` at the exact RC3 SHA and push it, then monitor and
+verify final publication. Do not tag current working-branch HEAD: its acceptance
+and handoff commits intentionally follow the frozen release source. If integration
+uses squash/rebase, update the record with the reviewed full-delta mapping and
+actual main commits before final tagging. Do not infer ancestry from tree equality.
 
 Branch-policy ruling: release refs are durable anchors rather than new
 workstreams. `component-catalog/antigravity-cli` remains the editing selection;
@@ -798,6 +817,15 @@ its ruling thread open):
    of the checkout-local need once it exists.
 
 ## Open Threads
+
+- v0.2.11 final remains pending PR delivery. RC3 is the accepted candidate;
+  RC0 failed before staging, RC1 retains a fully verified draft after publication
+  lookup failure, and RC2 is a published prerelease superseded by RC3's packaging
+  pins. Keep their tags/assets unchanged. Re-verify remote PR, main, tag, release
+  and Latest state on resume. No credentials were changed and no main integration
+  exception is claimed. The intake on `component-catalog/outbox` remains undelivered
+  until its separate PR reaches main. Everything required for the next step is
+  committed; temporary local build/proof artifacts are reproducible and not records.
 
 - **One base family, named plainly** (owner direction 2026-09-06,
   implemented on the branch, matrix `embedded-16`): `postgresql-client`
