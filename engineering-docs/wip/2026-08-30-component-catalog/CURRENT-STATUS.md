@@ -13,7 +13,24 @@ Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
 
-## Next Resumable Task
+## Current Release-Protocol Discussion (2026-09-09)
+
+Verified from fetched `origin/main`: PR #62 merged the earlier release/build
+implementation at `011226b`; main is at `3f028ee` (coverage update). This checkout
+was synchronized to that mainline. The previous PR-creation blocker below is
+historical; it no longer describes integration status.
+
+The owner now proposes release-candidate branches and prerelease tags, followed
+by final release branches and tags whose changes are integrated to main or have
+an explicitly documented exception. Main should remain open and need not itself
+be shippable for maintenance releases. The next slice is settling and implementing
+that protocol. The [candidate proposal](release-candidates-proposal.md) records
+the requested direction, suggested acceptance/integration checks, the RC-versus-
+final artifact identity tradeoff, and required branch-policy amendments. These
+refinements are proposed, not implemented. No candidate/release branch or tag
+was created during this discussion.
+
+## Previous Implementation Checkpoint (2026-09-08)
 
 The owner resumed this branch on 2026-09-08 and explicitly authorized the
 release simplification discussed here, adding independent component-install
@@ -1016,6 +1033,8 @@ its ruling thread open):
   the host path.
 
 ## Workstream Document Index
+
+- [Release candidates and maintenance branches (proposal)](release-candidates-proposal.md)
 
 - [Antigravity CLI: license and redistribution analysis](antigravity-cli-license-and-redistribution-analysis.md)
   (2026-09-02, the ledger gate for track 2)
