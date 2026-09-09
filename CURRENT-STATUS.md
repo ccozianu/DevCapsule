@@ -12,7 +12,6 @@ state belongs in each linked workstream handoff.
 | `project-management` | 2026-08-09 | Maintain project-wide priorities, sequencing, dependencies, and lifecycle coordination | active; permanent coordination | `project-management/coordination` | [workstream status](engineering-docs/wip/2026-08-09-project-management/CURRENT-STATUS.md) |
 | `sample-projects` | 2026-08-14 | Provide realistic sample projects as submodules that demonstrate ordinary adopter development inside DevCapsule | paused 2026-08-21 after adding human-authorized workstream-change rules; labeled fixtures are next | `sample-projects/fastapi-webapp` | [workstream status](engineering-docs/wip/2026-08-14-sample-projects/CURRENT-STATUS.md) |
 | `contained-display` | 2026-08-19 | Own the capsule supervisor core (container entry process, supervised children, explicit session end, headless mode) and the capsule's own display environment, closing the host-session credential exposure — supervisor first, display as its first consumer | paused 2026-08-30 by the product owner until `component-catalog` shows significant progress; supervisor core assignment stands, see intake | `contained-display/`; no branch yet | [workstream status](engineering-docs/wip/2026-08-19-contained-display/CURRENT-STATUS.md) |
-| `component-catalog` | 2026-08-30 | Make IDE surfaces and agent CLIs regular catalog components: a neutral `codium` interactive surface replacing the special-cased `codium_with_claude` path, then the Antigravity CLI as a default-selected, just-in-time-materialized agent component with per-checkout persistent state | active 2026-09-09; PR #65 merged; v0.2.11 published as Latest and independently verified; implementation frozen, workflow closure only | `component-catalog/antigravity-cli` (current working branch); `component-catalog/outbox` | [workstream status](engineering-docs/wip/2026-08-30-component-catalog/CURRENT-STATUS.md) |
 
 Paused and blocked workstreams remain open until they conclude successfully or
 unsuccessfully. The one exception is `project-management`, which every
@@ -81,3 +80,11 @@ protocol.
   directory, or the workstream that created it. Established 2026-08-15; see the
   [portfolio checkpoint](engineering-docs/wip/2026-08-09-project-management/2026-08-15-portfolio-checkpoint.md)
   and the [coordination backlog](engineering-docs/wip/2026-08-09-project-management/coordination-backlog.md).
+
+## Component Catalog Conclusion
+
+On 2026-09-09 the owner concluded `component-catalog` after v0.2.11 publication
+and requested selecting `project-management` in this checkout. Its
+[successful archive](engineering-docs/archive/2026-08-30-component-catalog/CURRENT-STATUS.md)
+records delivered scope, release evidence, retained test resources and residual
+planning questions. No new implementation scope is opened by the closure.

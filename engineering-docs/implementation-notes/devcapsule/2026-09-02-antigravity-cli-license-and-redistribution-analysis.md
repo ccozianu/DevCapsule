@@ -1,7 +1,7 @@
 # Antigravity CLI: License And Redistribution Analysis
 
 Performed 2026-09-02, the analysis the v1 scope ledger gates track 2 on,
-per the delivery contract in this workstream's `CURRENT-STATUS.md`. The
+per the [component delivery contract](../../archive/2026-08-30-component-catalog/CURRENT-STATUS.md#delivered-contract). The
 facts below were verified against the live distribution channel on that
 date; the artifact verification was performed hands-on.
 
@@ -85,7 +85,7 @@ Governing documents: the Google Terms of Service plus the
    contract's archive-over-package preference; the single-file tarball
    makes this trivial.
 4. **State slot**: a checkout-scoped persistent slot mapping
-   `~/.gemini/antigravity-cli`, in the pattern Claude Code established;
+   all of `~/.gemini` (corrected during the 2026-09-02 smoke), in the pattern Claude Code established;
    credentials arrive per-checkout via the keyring/browser flow or a
    `GEMINI_API_KEY` host-environment binding, never by installation.
 5. **Inspection**: selection, state location, and authorization state

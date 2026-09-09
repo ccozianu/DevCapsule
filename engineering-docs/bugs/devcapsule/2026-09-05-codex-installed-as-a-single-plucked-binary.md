@@ -9,7 +9,7 @@ with a sandboxed command succeeding.
 
 Requirements: R-PRODUCT-001
 
-Related: the [Antigravity delivery contract](../../wip/2026-08-30-component-catalog/CURRENT-STATUS.md)
+Related: the [Antigravity delivery contract](../../archive/2026-08-30-component-catalog/CURRENT-STATUS.md)
 (the `/opt/<component>` prefix convention this fix follows), and the
 [upgrade-experience intake](../../wip/2026-08-09-project-management/intake/)
 (the owner met this while rebuilding v0.2.9 and upgrading codex).
