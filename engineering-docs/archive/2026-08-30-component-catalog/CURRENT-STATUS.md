@@ -101,18 +101,24 @@ Retained evidence (do not confuse it with running infrastructure):
 
 ## Open Threads At Closure
 
-Correction to the historical handoff: the 2026-09-06 inside/outside-runtime
-intake was not delivered to main, despite this workstream's earlier send/pause
-claims. The cited `802adafa3d545895b979288a57cf1363329b94c7` is now readable
-locally but is not reachable from any current branch or main; its original item
-can therefore be recovered. The reconstructed item exists on project-management's
-branch in `2c1113e`. That branch also contains
-an unsent correction addressed to this now-closing workstream. This archive
-corrects our own account before the switch; project management should retire
-that unsent correction rather than re-create a closed WIP directory when it
-synchronizes. The reconstruction should be compared with that recovered original
-rather than treated as verified recollection. The owner's later direction selected launcher PEX
-delivery, now shipped in v0.2.11; the lost-mail workflow issue remains distinct.
+Correction acknowledged at closure: PR #67 delivered
+`2026-09-08-project-management-sync-item-never-arrived.md` while finalization was
+being prepared. The 2026-09-06 inside/outside-runtime intake had not reached
+main despite this workstream's earlier send/pause claims. The original
+`802adafa3d545895b979288a57cf1363329b94c7` is now readable locally but is not
+reachable from a current branch; [its recovered original](recovered-sync-intake.md)
+is preserved here. The original's alternatives were tag-based base selection
+and build-mnemonic equality; project-management's reconstruction instead
+introduced an explicit compatibility-policy option. Treat that as its analysis,
+not this sender's historical wording. The owner's later direction selected
+launcher PEX delivery, shipped in v0.2.11. The correction is complete; prevention
+of lost outbox mail remains a separate workflow concern.
+
+The acknowledgment/deletion travels as a separate standing-outbox commit in
+the final closure PR, together with the archive that preserves its log. The
+protocol does not prescribe separate PRs when a late intake arrives during
+finalization; one atomic delivery keeps the disposition and archive together
+without publishing implementation through the outbox.
 
 No release or integration feature work remains. Questions and deferred options
 for project management, not automatic new implementation:
@@ -150,3 +156,4 @@ resources listed above remain; this documentation closure performs no pruning.
 
 - [This outcome and evidence](CURRENT-STATUS.md).
 - [Intake dispositions](intake-dispositions.md).
+- [Recovered original sync intake](recovered-sync-intake.md) (historical 2026-09-06 content).
