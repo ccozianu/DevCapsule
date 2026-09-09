@@ -4,7 +4,7 @@ Mnemonic: `component-catalog`
 
 Start date: 2026-08-30
 
-State: active 2026-09-09; RC3 built a full recipe-7 base and passed seven Docker smoke tests
+State: active 2026-09-09; full candidate-base smoke and existing recursive suite passed
 
 Integration target: `main`
 
@@ -12,6 +12,47 @@ Delivery method: pull request, one per validated component (see *Integration
 Cadence*)
 
 Requirements: `R-PRODUCT-001`, `R-PRODUCT-002`, `R-SCOPE-001`, `R-DOCKER-001`
+
+## Recursive Suite Execution (2026-09-09)
+
+At the owner's request, ran the existing recursive suite from clean source
+`b93b5e193cbb7808f701a9278474c0dfa72e6e5b` after confirming the branch already
+contains fetched main. The current capsule passed Docker, host-network,
+persistent-home, runtime-plan, and X11 authorization preflight.
+
+```text
+cd devcapsule-src
+.venv/bin/python -m nox -s recursive_dogfood_e2e
+```
+
+Result: **2 passed, 7 deselected in 44.82 seconds**; Nox completed successfully
+in 48 seconds. This executes source CLI planning, an isolated contributor
+bootstrap, and the recursive clean-local-clone protocol. The clone test verifies
+the current capsule's embedded PEX against its image provenance independently
+of the selected source revision. Contributor bootstrap uses the actual base
+under the current running capsule, not the new candidate base retained below.
+
+Also invoked the checksum-verified published RC3 executable directly for
+`project --path . recursive-e2e preflight --json` and `recursive-e2e run --json`.
+Both passed. The image-revision warning correctly distinguishes the RC3 caller
+from the older running capsule. The RC3 planning run
+`1dbf3d31aa891c761324c1c4b97ee69c` and source planning run
+`7c19ec360726b7052d1755d32ac74de7` report cleanup complete; their staging
+directories were independently confirmed absent. Contributor run
+`a74003586f14b0abef25fca7f3b688ee` also removed its exact container and workspace.
+Local logs: `/tmp/devcapsule-rc3-recursive-nox.log` and
+`/tmp/devcapsule-rc3-recursive-dry-run.json`.
+
+Scope limitation: the current public `recursive-e2e run` implements a dry run;
+the Nox wrapper adds the two tests above. Neither orchestrates successor building
+or launch. No new successor IDE, GUI acceptance, or full recursive lifecycle
+acceptance is claimed. The earlier full candidate-base smoke remains separate
+evidence. No implementation changes were needed to execute this suite.
+
+**Planned next step:** the owner has been asked whether to add an actual
+successor launch using the published RC3 executable and retained candidate base,
+with a manual IDE/terminal check. Otherwise continue review/integration of the
+smoke harness and final promotion at the frozen accepted RC3 source.
 
 ## Full Candidate Base Smoke (2026-09-09)
 
@@ -909,6 +950,11 @@ its ruling thread open):
    of the checkout-local need once it exists.
 
 ## Open Threads
+
+- The requested existing recursive suite passed, as did published RC3's direct
+  preflight/planning commands. Actual successor launch is a separate step; the
+  optional scope question to the owner is pending. No manual IDE result is
+  inferred from the automated checks. Temporary test resources were cleaned.
 
 - The full-base coverage correction is complete: RC3's own builder produced a
   local recipe-7 base and all seven tests passed. Retained image references and
