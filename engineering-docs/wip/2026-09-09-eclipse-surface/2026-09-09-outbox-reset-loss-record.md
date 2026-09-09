@@ -102,7 +102,7 @@ protocol.
 | 1 | `2026-08-16-project-management-v026-deliverables.md` (two v026 items) | `project-management` | 2026-08-16 | Sat undelivered; landed only via `PR #25`. Resend was recommended and still did not arrive. |
 | 2 | `2026-08-17-recursive-e2e-audit-undelivered-work.md` at `ebad342` | `recursive-e2e` | 2026-08-17 | Orphaned by a later reset; recovered and delivered 2026-08-27 via `PR #43`. Self-demonstrating: the audit asking about the failure was destroyed by the failure. |
 | 3 | `2026-09-06-component-catalog-one-devcapsule-inside-and-outside.md` at `802adaf` | `component-catalog` | ~2026-09-07 | Destroyed. Not recoverable; **reconstructed** on 2026-09-08 in `2c1113e`, and the sender's two non-preferred design shapes "survived nowhere." |
-| 4 | The `2026-08-19` amendment at `b1f7273` (Appendix A) | `project-management` | 2026-08-19 | **Was still intact**, caught 2026-09-09 immediately before the reset that would have destroyed it. Preserved verbatim here and on `project-management/outbox-pending-2026-08-19`. |
+| 4 | The `2026-08-19` amendment at `b1f7273` (Appendix A) | `project-management` | 2026-08-19 | Caught 2026-09-09 immediately before the reset that would have destroyed it. **Recovered and delivered the same day** through `PR #66`; `main` now carries it byte-identical to `b1f7273`. |
 | 5 | `2026-08-17-workflow-improvements-obsolete-intake-readmes.md` at `19daa31` (Appendix B) | `workflow-improvements` | 2026-08-17 | **Still intact on `origin/workflow-improvements/outbox`.** Found 2026-09-09 by the audit. Alive only because that workstream is open-idle and has not sent since; its next send destroys it. |
 
 Occurrence 3 was known to be permitted and was left standing deliberately:
@@ -203,6 +203,28 @@ do instead. The cure is the one `project-management` already stated on
 reset while unreceived mail exists" — carry the pending commits onto the new
 base, or refuse the send until the open pull request lands.
 
+## Outcome For Occurrence 4
+
+Recorded 2026-09-09, after the fact, because it changes what this document is
+for.
+
+The preserved branch `project-management/outbox-pending-2026-08-19` was merged
+to `main` through `PR #66` while this record was being written. Verified: the
+intake file on `main` is now byte-identical to the `b1f7273` version, so the
+2026-08-19 amendment and its *Ratified Boundary* section are delivered in full,
+21 days late, to the recipient they were always addressed to.
+
+That makes occurrence 4 the **first of the five to be recovered rather than
+reconstructed**. Occurrence 3 was rebuilt from a surviving handoff record and
+the sender's two non-preferred design shapes "survived nowhere"; occurrence 4
+lost nothing. *Appendix A* is therefore now a redundant custody copy rather
+than the only surviving text, and it is kept only so the record is
+self-contained.
+
+Occurrence 5 has not been delivered. Its content is safe here, but the item
+itself is still absent from `project-management`'s intake, and only
+`workflow-improvements` can send it.
+
 ## What Was Done, And What Was Not
 
 Done: the item's full content is preserved verbatim in Appendix A, inside a
@@ -210,12 +232,10 @@ commit bound for `main`. It can no longer be lost by any branch operation.
 
 Not done, and left to the owner:
 
-- **Delivering the item.** It belongs in `workflow-improvements`' intake, and
-  delivering it means amending that workstream's intake file. That is
-  `project-management`'s message to send, and the owner asked that
-  `project-management` be left as-is.
-- **Dispositioning it.** `workflow-improvements` is open-idle with seven items
-  already waiting, and `WORKFLOW.md` is frozen.
+- **Dispositioning occurrence 4.** It was delivered on 2026-09-09 through
+  `PR #66` — see *Outcome* below — so `workflow-improvements` can now see it.
+  That workstream is open-idle with seven items already waiting, and
+  `WORKFLOW.md` is frozen until a release candidate.
 - **Fixing the protocol.** `workflow-improvements` owns it. The 2026-08-29
   finding already states the shape of the fix: the exposure "ends structurally
   only when a send stops implying a reset while unreceived mail exists."

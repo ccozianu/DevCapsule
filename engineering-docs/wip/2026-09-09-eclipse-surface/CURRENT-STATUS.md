@@ -166,10 +166,10 @@ been chosen, no capability name has been ruled, and no branch has been forked.
   handoff or its coordination backlog, and it has not been placed in the V1
   scope ledger. Whether Eclipse is a V1 surface or a post-V1 addition is an
   open project-level question that `project-management` owns.
-- The custody record above is unrouted. Both stranded items are preserved but
-  still undelivered — occurrence 4 belongs in `workflow-improvements`' intake and
-  only `project-management` can send it; occurrence 5 belongs in
-  `project-management`'s intake and only `workflow-improvements` can send it.
+- The custody record above is unrouted. Occurrence 4 was recovered and delivered
+  to `main` on 2026-09-09 through `PR #66`, byte-identical. Occurrence 5 is
+  preserved but still undelivered: it belongs in `project-management`'s intake
+  and only `workflow-improvements` can send it.
   Dispositioning them and fixing the protocol are open and belong elsewhere. The
   outbox audit itself is complete: all five were checked, and the other three are
   clean.
